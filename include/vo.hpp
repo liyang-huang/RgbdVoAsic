@@ -20,6 +20,7 @@ using namespace cv;
       Mat depth;
       Mat mask;
       Mat normals;
+      Mat cloud;
   };
 
   struct  OdometryFrame : public RgbdFrame
@@ -45,18 +46,23 @@ using namespace cv;
     void
     releasePyramids();
 
-    std::vector<Mat> pyramidImage;
-    std::vector<Mat> pyramidDepth;
-    std::vector<Mat> pyramidMask;
+    //std::vector<Mat> pyramidImage;
+    //std::vector<Mat> pyramidDepth;
+    //std::vector<Mat> pyramidMask;
 
-    std::vector<Mat> pyramidCloud;
+    //std::vector<Mat> pyramidCloud;
 
-    std::vector<Mat> pyramid_dI_dx;
-    std::vector<Mat> pyramid_dI_dy;
-    std::vector<Mat> pyramidTexturedMask;
+    //std::vector<Mat> pyramid_dI_dx;
+    //std::vector<Mat> pyramid_dI_dy;
+    //std::vector<Mat> pyramidTexturedMask;
+    Mat dI_dx;
+    Mat dI_dy;
+    Mat maskText;
 
-    std::vector<Mat> pyramidNormals;
-    std::vector<Mat> pyramidNormalsMask;
+    //std::vector<Mat> pyramidNormals;
+    //std::vector<Mat> pyramidNormalsMask;
+    Mat maskDepth;
+    Mat maskNormal;
   };
 
   class Odometry
@@ -101,7 +107,7 @@ using namespace cv;
     Odometry();
     Odometry(const Mat& cameraMatrix, float minDepth = DEFAULT_MIN_DEPTH(), float maxDepth = DEFAULT_MAX_DEPTH(),
                  float maxDepthDiff = DEFAULT_MAX_DEPTH_DIFF(), const std::vector<int>& iterCounts = std::vector<int>(),
-                 const std::vector<float>& minGradientMagnitudes = std::vector<float>(), float maxPointsPart = DEFAULT_MAX_POINTS_PART());
+                 /*const std::vector<float>& minGradientMagnitudes = std::vector<float>(), */float maxPointsPart = DEFAULT_MAX_POINTS_PART());
 
 
     void setCameraMatrix(const cv::Mat &val)
@@ -140,14 +146,14 @@ using namespace cv;
     {
         iterCounts = val;
     }
-    cv::Mat getMinGradientMagnitudes() const
-    {
-        return minGradientMagnitudes;
-    }
-    void setMinGradientMagnitudes(const cv::Mat &val)
-    {
-        minGradientMagnitudes = val;
-    }
+    //cv::Mat getMinGradientMagnitudes() const
+    //{
+    //    return minGradientMagnitudes;
+    //}
+    //void setMinGradientMagnitudes(const cv::Mat &val)
+    //{
+    //    minGradientMagnitudes = val;
+    //}
     double getMaxPointsPart() const
     {
         return maxPointsPart;
@@ -184,7 +190,7 @@ using namespace cv;
 
     Mat iterCounts;
 
-    Mat minGradientMagnitudes;
+    //Mat minGradientMagnitudes;
     double maxPointsPart;
 
     Mat cameraMatrix;
