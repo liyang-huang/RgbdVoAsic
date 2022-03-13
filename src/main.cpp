@@ -17,7 +17,7 @@
 using namespace std;
 using namespace cv;
 
-#define BILATERAL_FILTER 0// if 1 then bilateral filter will be used for the depth
+//#define BILATERAL_FILTER 0// if 1 then bilateral filter will be used for the depth
 
 class MyTickMeter
 {
@@ -35,7 +35,7 @@ public:
     }
 
     int64 getTimeTicks() const { return sumTime; }
-    double getTimeSec()   const { return (double)getTimeTicks()/getTickFrequency(); }
+    float getTimeSec()   const { return (float)getTimeTicks()/getTickFrequency(); }
     int64 getCounter() const { return counter; }
 
     void reset() { startTime = sumTime = 0; counter = 0; }
@@ -61,24 +61,24 @@ void writeResults( const string& filename, const vector<string>& timestamps, con
         if( Rt_curr.empty() )
             continue;
 
-        CV_Assert( Rt_curr.type() == CV_64FC1 );
+        CV_Assert( Rt_curr.type() == CV_32FC1 );
 
         Mat R = Rt_curr(Rect(0,0,3,3)), rvec;
         Rodrigues(R, rvec);
-        double alpha = norm( rvec );
+        float alpha = norm( rvec );
         if(alpha > DBL_MIN)
             rvec = rvec / alpha;
 
-        double cos_alpha2 = std::cos(0.5 * alpha);
-        double sin_alpha2 = std::sin(0.5 * alpha);
+        float cos_alpha2 = std::cos(0.5 * alpha);
+        float sin_alpha2 = std::sin(0.5 * alpha);
 
         rvec *= sin_alpha2;
 
-        CV_Assert( rvec.type() == CV_64FC1 );
+        CV_Assert( rvec.type() == CV_32FC1 );
         // timestamp tx ty tz qx qy qz qw
         file << timestamps[i] << " " << fixed
-             << Rt_curr.at<double>(0,3) << " " << Rt_curr.at<double>(1,3) << " " << Rt_curr.at<double>(2,3) << " "
-             << rvec.at<double>(0) << " " << rvec.at<double>(1) << " " << rvec.at<double>(2) << " " << cos_alpha2 << endl;
+             << Rt_curr.at<float>(0,3) << " " << Rt_curr.at<float>(1,3) << " " << Rt_curr.at<float>(2,3) << " "
+             << rvec.at<float>(0) << " " << rvec.at<float>(1) << " " << rvec.at<float>(2) << " " << cos_alpha2 << endl;
 
     }
     file << v_max << endl;
@@ -161,9 +161,9 @@ int main(int argc, char** argv)
         Mat image, depth;
         // Read one pair (rgb and depth)
         // example: 1305031453.359684 rgb/1305031453.359684.png 1305031453.374112 depth/1305031453.374112.png
-#if BILATERAL_FILTER
-        MyTickMeter tm_bilateral_filter;
-#endif
+//#if BILATERAL_FILTER
+//        MyTickMeter tm_bilateral_filter;
+//#endif
         {
             string rgbFilename = str.substr(timestampLength + 1, rgbPathLehgth );
             string timestap = str.substr(0, timestampLength);
@@ -181,10 +181,11 @@ int main(int argc, char** argv)
             // scale depth
             Mat depth_flt;
             depth.convertTo(depth_flt, CV_32FC1, 1.f/5000.f);
-#if !BILATERAL_FILTER
+//#if !BILATERAL_FILTER
             depth_flt.setTo(std::numeric_limits<float>::quiet_NaN(), depth == 0);
             depth = depth_flt;
-#else
+//#else
+/*
             tm_bilateral_filter.start();
             depth = Mat(depth_flt.size(), CV_32FC1, Scalar(0));
             const double depth_sigma = 0.03;
@@ -196,6 +197,7 @@ int main(int argc, char** argv)
             tm_bilateral_filter.stop();
             cout << "Time filter " << tm_bilateral_filter.getTimeSec() << endl;
 #endif
+*/
             timestamps.push_back( timestap );
         }
 
@@ -216,15 +218,15 @@ int main(int argc, char** argv)
                 tm.stop();
                 count++;
                 cout << "Time " << tm.getTimeSec() << endl;
-#if BILATERAL_FILTER
-                cout << "Time ratio " << tm_bilateral_filter.getTimeSec() / tm.getTimeSec() << endl;
-#endif
+//#if BILATERAL_FILTER
+//                cout << "Time ratio " << tm_bilateral_filter.getTimeSec() / tm.getTimeSec() << endl;
+//#endif
                 if(!res)
-                    Rt = Mat::eye(4,4,CV_64FC1);
+                    Rt = Mat::eye(4,4,CV_32FC1);
             }
 
             if( Rts.empty() )
-                Rts.push_back(Mat::eye(4,4,CV_64FC1));
+                Rts.push_back(Mat::eye(4,4,CV_32FC1));
             else
             {
                 Mat& prevRt = *Rts.rbegin();

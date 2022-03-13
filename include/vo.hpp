@@ -46,21 +46,9 @@ using namespace cv;
     void
     releasePyramids();
 
-    //std::vector<Mat> pyramidImage;
-    //std::vector<Mat> pyramidDepth;
-    //std::vector<Mat> pyramidMask;
-
-    //std::vector<Mat> pyramidCloud;
-
-    //std::vector<Mat> pyramid_dI_dx;
-    //std::vector<Mat> pyramid_dI_dy;
-    //std::vector<Mat> pyramidTexturedMask;
     Mat dI_dx;
     Mat dI_dy;
     Mat maskText;
-
-    //std::vector<Mat> pyramidNormals;
-    //std::vector<Mat> pyramidNormalsMask;
     Mat maskDepth;
     Mat maskNormal;
   };
@@ -100,10 +88,6 @@ using namespace cv;
     {
       return 15; // in degrees
     }
-    cv::Mat getCameraMatrix() const
-    {
-        return cameraMatrix;
-    }
     Odometry();
     Odometry(const Mat& cameraMatrix, float minDepth = DEFAULT_MIN_DEPTH(), float maxDepth = DEFAULT_MAX_DEPTH(),
                  float maxDepthDiff = DEFAULT_MAX_DEPTH_DIFF(), const std::vector<int>& iterCounts = std::vector<int>(),
@@ -114,70 +98,6 @@ using namespace cv;
     {
         cameraMatrix = val;
     }
-    double getMinDepth() const
-    {
-        return minDepth;
-    }
-    void setMinDepth(double val)
-    {
-        minDepth = val;
-    }
-    double getMaxDepth() const
-    {
-        return maxDepth;
-    }
-    void setMaxDepth(double val)
-    {
-        maxDepth = val;
-    }
-    double getMaxDepthDiff() const
-    {
-        return maxDepthDiff;
-    }
-    void setMaxDepthDiff(double val)
-    {
-        maxDepthDiff = val;
-    }
-    cv::Mat getIterationCounts() const
-    {
-        return iterCounts;
-    }
-    void setIterationCounts(const cv::Mat &val)
-    {
-        iterCounts = val;
-    }
-    //cv::Mat getMinGradientMagnitudes() const
-    //{
-    //    return minGradientMagnitudes;
-    //}
-    //void setMinGradientMagnitudes(const cv::Mat &val)
-    //{
-    //    minGradientMagnitudes = val;
-    //}
-    double getMaxPointsPart() const
-    {
-        return maxPointsPart;
-    }
-    void setMaxPointsPart(double val)
-    {
-        maxPointsPart = val;
-    }
-    double getMaxTranslation() const
-    {
-        return maxTranslation;
-    }
-    void setMaxTranslation(double val)
-    {
-        maxTranslation = val;
-    }
-    double getMaxRotation() const
-    {
-        return maxRotation;
-    }
-    void setMaxRotation(double val)
-    {
-        maxRotation = val;
-    }
 
     bool
     compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFrame, Mat& Rt, int& v_max, const Mat& initRt = Mat()) const;
@@ -186,14 +106,14 @@ using namespace cv;
 
   protected:
 
-    double minDepth, maxDepth, maxDepthDiff;
+    float minDepth, maxDepth, maxDepthDiff;
 
     Mat iterCounts;
 
     //Mat minGradientMagnitudes;
-    double maxPointsPart;
+    float maxPointsPart;
 
     Mat cameraMatrix;
 
-    double maxTranslation, maxRotation;
+    float maxTranslation, maxRotation;
   };

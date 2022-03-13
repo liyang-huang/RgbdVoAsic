@@ -10,7 +10,7 @@ using namespace std;
 //
 const int maxLineDiff = 70;
 const int sobelSize = 3;
-const double sobelScale = 1./8.;
+const float sobelScale = 1./8.;
 
 //const float iterCounts = 7;
 static inline
@@ -82,23 +82,11 @@ void OdometryFrame::release()
 
 void OdometryFrame::releasePyramids()
 {
-    //pyramidImage.clear();
-    //pyramidDepth.clear();
-    //pyramidMask.clear();
-
-    //pyramidCloud.clear();
-
-    //pyramid_dI_dx.clear();
-    //pyramid_dI_dy.clear();
-    //pyramidTexturedMask.clear();
     dI_dx.release();
     dI_dy.release();
     maskText.release();
     maskDepth.release();
     maskNormal.release();
-
-    //pyramidNormals.clear();
-    //pyramidNormalsMask.clear();
 }
 
 
@@ -131,54 +119,6 @@ Odometry::Odometry(const Mat& _cameraMatrix,
     {
         setDefaultIterCounts(iterCounts);
         //setDefaultMinGradientMagnitudes(minGradientMagnitudes);
-    }
-}
-
-static
-void preparePyramidImage(const Mat& image, std::vector<Mat>& pyramidImage, size_t levelCount)
-{
-    if(!pyramidImage.empty())
-    {
-        if(pyramidImage.size() < levelCount)
-            CV_Error(Error::StsBadSize, "Levels count of pyramidImage has to be equal or less than size of iterCounts.");
-
-        CV_Assert(pyramidImage[0].size() == image.size());
-        for(size_t i = 0; i < pyramidImage.size(); i++)
-            CV_Assert(pyramidImage[i].type() == image.type());
-    }
-    else
-        buildPyramid(image, pyramidImage, (int)levelCount - 1);
-}
-
-static
-void preparePyramidDepth(const Mat& depth, std::vector<Mat>& pyramidDepth, size_t levelCount)
-{
-    if(!pyramidDepth.empty())
-    {
-        if(pyramidDepth.size() < levelCount)
-            CV_Error(Error::StsBadSize, "Levels count of pyramidDepth has to be equal or less than size of iterCounts.");
-
-        CV_Assert(pyramidDepth[0].size() == depth.size());
-        for(size_t i = 0; i < pyramidDepth.size(); i++)
-            CV_Assert(pyramidDepth[i].type() == depth.type());
-    }
-    else
-        buildPyramid(depth, pyramidDepth, (int)levelCount - 1);
-}
-
-static
-void buildPyramidCameraMatrix(const Mat& cameraMatrix, int levels, std::vector<Mat>& pyramidCameraMatrix)
-{
-    pyramidCameraMatrix.resize(levels);
-
-    Mat cameraMatrix_dbl;
-    cameraMatrix.convertTo(cameraMatrix_dbl, CV_64FC1);
-
-    for(int i = 0; i < levels; i++)
-    {
-        Mat levelCameraMatrix = i == 0 ? cameraMatrix_dbl : 0.5f * pyramidCameraMatrix[i-1];
-        levelCameraMatrix.at<double>(2,2) = 1.;
-        pyramidCameraMatrix[i] = levelCameraMatrix;
     }
 }
 
@@ -218,13 +158,6 @@ inline void
 rescaleDepthTemplated<float>(const Mat& in, Mat& out)
 {
   rescaleDepth(in, CV_32F, out);
-}
-
-template<>
-inline void
-rescaleDepthTemplated<double>(const Mat& in, Mat& out)
-{
-  rescaleDepth(in, CV_64F, out);
 }
 
 template<typename T>
@@ -294,154 +227,7 @@ depthTo3d(InputArray depth_in, InputArray K_in, OutputArray points3d_out)
   // Create 3D points in one go.
   points3d_out.create(depth.size(), CV_MAKETYPE(K_new.depth(), 3));
   cv::Mat points3d = points3d_out.getMat();
-  if (K_new.depth() == CV_64F)
-    depthTo3dNoMask<double>(depth, K_new, points3d);
-  else
-    depthTo3dNoMask<float>(depth, K_new, points3d);
-}
-
-static
-void preparePyramidCloud(const std::vector<Mat>& pyramidDepth, const Mat& cameraMatrix, std::vector<Mat>& pyramidCloud)
-{
-    if(!pyramidCloud.empty())
-    {
-        if(pyramidCloud.size() != pyramidDepth.size())
-            CV_Error(Error::StsBadSize, "Incorrect size of pyramidCloud.");
-
-        for(size_t i = 0; i < pyramidDepth.size(); i++)
-        {
-            CV_Assert(pyramidCloud[i].size() == pyramidDepth[i].size());
-            CV_Assert(pyramidCloud[i].type() == CV_32FC3);
-        }
-    }
-    else
-    {
-        std::vector<Mat> pyramidCameraMatrix;
-        buildPyramidCameraMatrix(cameraMatrix, (int)pyramidDepth.size(), pyramidCameraMatrix);
-
-        pyramidCloud.resize(pyramidDepth.size());
-        for(size_t i = 0; i < pyramidDepth.size(); i++)
-        {
-            Mat cloud;
-            depthTo3d(pyramidDepth[i], pyramidCameraMatrix[i], cloud);
-            pyramidCloud[i] = cloud;
-        }
-    }
-}
-
-static
-void preparePyramidNormals(const Mat& normals, const std::vector<Mat>& pyramidDepth, std::vector<Mat>& pyramidNormals)
-{
-    if(!pyramidNormals.empty())
-    {
-        if(pyramidNormals.size() != pyramidDepth.size())
-            CV_Error(Error::StsBadSize, "Incorrect size of pyramidNormals.");
-
-        for(size_t i = 0; i < pyramidNormals.size(); i++)
-        {
-            CV_Assert(pyramidNormals[i].size() == pyramidDepth[i].size());
-            CV_Assert(pyramidNormals[i].type() == CV_32FC3);
-        }
-    }
-    else
-    {
-        buildPyramid(normals, pyramidNormals, (int)pyramidDepth.size() - 1);
-        // renormalize normals
-        for(size_t i = 1; i < pyramidNormals.size(); i++)
-        {
-            Mat& currNormals = pyramidNormals[i];
-            for(int y = 0; y < currNormals.rows; y++)
-            {
-                Point3f* normals_row = currNormals.ptr<Point3f>(y);
-                for(int x = 0; x < currNormals.cols; x++)
-                {
-                    double nrm = norm(normals_row[x]);
-                    normals_row[x] *= 1./nrm;
-                }
-            }
-        }
-    }
-}
-
-static
-void preparePyramidMask(const Mat& mask, const std::vector<Mat>& pyramidDepth, float minDepth, float maxDepth,
-                        const std::vector<Mat>& pyramidNormal,
-                        std::vector<Mat>& pyramidMask)
-{
-    minDepth = std::max(0.f, minDepth);
-
-    if(!pyramidMask.empty())
-    {
-        if(pyramidMask.size() != pyramidDepth.size())
-            CV_Error(Error::StsBadSize, "Levels count of pyramidMask has to be equal to size of pyramidDepth.");
-
-        for(size_t i = 0; i < pyramidMask.size(); i++)
-        {
-            CV_Assert(pyramidMask[i].size() == pyramidDepth[i].size());
-            CV_Assert(pyramidMask[i].type() == CV_8UC1);
-        }
-    }
-    else
-    {
-        Mat validMask;
-        if(mask.empty())
-            validMask = Mat(pyramidDepth[0].size(), CV_8UC1, Scalar(255));
-        else
-            validMask = mask.clone();
-
-        //cout << "liyang test" << validMask << endl;
-        //exit(1);
-        buildPyramid(validMask, pyramidMask, (int)pyramidDepth.size() - 1);
-
-        for(size_t i = 0; i < pyramidMask.size(); i++)
-        {
-            Mat levelDepth = pyramidDepth[i].clone();
-            patchNaNs(levelDepth, 0);
-
-            Mat& levelMask = pyramidMask[i];
-            levelMask &= (levelDepth > minDepth) & (levelDepth < maxDepth);
-
-            if(!pyramidNormal.empty())
-            {
-                CV_Assert(pyramidNormal[i].type() == CV_32FC3);
-                CV_Assert(pyramidNormal[i].size() == pyramidDepth[i].size());
-                Mat levelNormal = pyramidNormal[i].clone();
-
-                Mat validNormalMask = levelNormal == levelNormal; // otherwise it's Nan
-                CV_Assert(validNormalMask.type() == CV_8UC3);
-
-                std::vector<Mat> channelMasks;
-                split(validNormalMask, channelMasks);
-                validNormalMask = channelMasks[0] & channelMasks[1] & channelMasks[2];
-
-                levelMask &= validNormalMask;
-            }
-        }
-    }
-}
-
-static
-void preparePyramidSobel(const std::vector<Mat>& pyramidImage, int dx, int dy, std::vector<Mat>& pyramidSobel)
-{
-    if(!pyramidSobel.empty())
-    {
-        if(pyramidSobel.size() != pyramidImage.size())
-            CV_Error(Error::StsBadSize, "Incorrect size of pyramidSobel.");
-
-        for(size_t i = 0; i < pyramidSobel.size(); i++)
-        {
-            CV_Assert(pyramidSobel[i].size() == pyramidImage[i].size());
-            CV_Assert(pyramidSobel[i].type() == CV_16SC1);
-        }
-    }
-    else
-    {
-        pyramidSobel.resize(pyramidImage.size());
-        for(size_t i = 0; i < pyramidImage.size(); i++)
-        {
-            Sobel(pyramidImage[i], pyramidSobel[i], CV_16S, dx, dy, sobelSize);
-        }
-    }
+  depthTo3dNoMask<float>(depth, K_new, points3d);
 }
 
 static
@@ -468,95 +254,6 @@ void randomSubsetOfMask(Mat& mask, float part)
             }
         }
         mask = subset;
-    }
-}
-
-static
-void preparePyramidTexturedMask(const std::vector<Mat>& pyramid_dI_dx, const std::vector<Mat>& pyramid_dI_dy,
-                                const std::vector<float>& minGradMagnitudes, const std::vector<Mat>& pyramidMask, double maxPointsPart,
-                                std::vector<Mat>& pyramidTexturedMask)
-{
-    if(!pyramidTexturedMask.empty())
-    {
-        if(pyramidTexturedMask.size() != pyramid_dI_dx.size())
-            CV_Error(Error::StsBadSize, "Incorrect size of pyramidTexturedMask.");
-
-        for(size_t i = 0; i < pyramidTexturedMask.size(); i++)
-        {
-            CV_Assert(pyramidTexturedMask[i].size() == pyramid_dI_dx[i].size());
-            CV_Assert(pyramidTexturedMask[i].type() == CV_8UC1);
-        }
-    }
-    else
-    {
-        const float sobelScale2_inv = 1.f / (float)(sobelScale * sobelScale);
-        pyramidTexturedMask.resize(pyramid_dI_dx.size());
-        for(size_t i = 0; i < pyramidTexturedMask.size(); i++)
-        {
-            const float minScaledGradMagnitude2 = minGradMagnitudes[i] * minGradMagnitudes[i] * sobelScale2_inv;
-            const Mat& dIdx = pyramid_dI_dx[i];
-            const Mat& dIdy = pyramid_dI_dy[i];
-
-            Mat texturedMask(dIdx.size(), CV_8UC1, Scalar(0));
-
-            for(int y = 0; y < dIdx.rows; y++)
-            {
-                const short *dIdx_row = dIdx.ptr<short>(y);
-                const short *dIdy_row = dIdy.ptr<short>(y);
-                uchar *texturedMask_row = texturedMask.ptr<uchar>(y);
-                for(int x = 0; x < dIdx.cols; x++)
-                {
-                    float magnitude2 = static_cast<float>(dIdx_row[x] * dIdx_row[x] + dIdy_row[x] * dIdy_row[x]);
-                    if(magnitude2 >= minScaledGradMagnitude2)
-                        texturedMask_row[x] = 255;
-                }
-            }
-            pyramidTexturedMask[i] = texturedMask & pyramidMask[i];
-
-            randomSubsetOfMask(pyramidTexturedMask[i], (float)maxPointsPart);
-        }
-    }
-}
-
-static
-void preparePyramidNormalsMask(const std::vector<Mat>& pyramidNormals, const std::vector<Mat>& pyramidMask, double maxPointsPart,
-                               std::vector<Mat>& pyramidNormalsMask)
-{
-    if(!pyramidNormalsMask.empty())
-    {
-        if(pyramidNormalsMask.size() != pyramidMask.size())
-            CV_Error(Error::StsBadSize, "Incorrect size of pyramidNormalsMask.");
-
-        for(size_t i = 0; i < pyramidNormalsMask.size(); i++)
-        {
-            CV_Assert(pyramidNormalsMask[i].size() == pyramidMask[i].size());
-            CV_Assert(pyramidNormalsMask[i].type() == pyramidMask[i].type());
-        }
-    }
-    else
-    {
-        pyramidNormalsMask.resize(pyramidMask.size());
-
-        for(size_t i = 0; i < pyramidNormalsMask.size(); i++)
-        {
-            pyramidNormalsMask[i] = pyramidMask[i].clone();
-            Mat& normalsMask = pyramidNormalsMask[i];
-            for(int y = 0; y < normalsMask.rows; y++)
-            {
-                const Vec3f *normals_row = pyramidNormals[i].ptr<Vec3f>(y);
-                uchar *normalsMask_row = pyramidNormalsMask[i].ptr<uchar>(y);
-                for(int x = 0; x < normalsMask.cols; x++)
-                {
-                    Vec3f n = normals_row[x];
-                    if(cvIsNaN(n[0]))
-                    {
-                        CV_DbgAssert(cvIsNaN(n[1]) && cvIsNaN(n[2]));
-                        normalsMask_row[x] = 0;
-                    }
-                }
-            }
-            randomSubsetOfMask(normalsMask, (float)maxPointsPart);
-        }
     }
 }
 
@@ -711,59 +408,31 @@ Size Odometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
 
     checkDepth(frame->depth, frame->image.size());
     
-    //if(frame->mask.empty() && !frame->pyramidMask.empty()) //pre_frame has pyramidMask
-    //    frame->mask = frame->pyramidMask[0];
     checkMask(frame->mask, frame->image.size());
    
-    //preparePyramidImage(frame->image, frame->pyramidImage, iterCounts.total());
-
-    //preparePyramidDepth(frame->depth, frame->pyramidDepth, iterCounts.total());
-
-    //preparePyramidCloud(frame->pyramidDepth, cameraMatrix, frame->pyramidCloud);
-      
     depthTo3d(frame->depth, cameraMatrix, frame->cloud);
 
     if(cacheType & OdometryFrame::CACHE_DST)
     {
         if(frame->normals.empty())
         {
-            //if(!frame->pyramidNormals.empty())
-            //    frame->normals = frame->pyramidNormals[0];
-            //else
-            //{
-                //cout << "dpeth.depth() " << frame->depth.depth()<< endl;
-                //normalsComputer(frame->pyramidCloud[0], frame->depth.rows, frame->depth.cols, frame->normals);
                 normalsComputer(frame->cloud, frame->depth.rows, frame->depth.cols, frame->normals);
-            //}
         }
         checkNormals(frame->normals, frame->depth.size());
 
-        //preparePyramidNormals(frame->normals, frame->pyramidDepth, frame->pyramidNormals);
-
-        //preparePyramidMask(frame->mask, frame->pyramidDepth, (float)minDepth, (float)maxDepth,
-        //                   frame->pyramidNormals, frame->pyramidMask);
         MaskGen(frame->mask, frame->depth, (float)minDepth, (float)maxDepth,
                 frame->normals, frame->maskDepth);
 
-        //cout << "liyang test" << frame->mask << endl;
-        //exit(1);
-        //preparePyramidSobel(frame->pyramidImage, 1, 0, frame->pyramid_dI_dx);
-        //preparePyramidSobel(frame->pyramidImage, 0, 1, frame->pyramid_dI_dy);
         Sobel(frame->image, frame->dI_dx, CV_16S, 1, 0, sobelSize);
         Sobel(frame->image, frame->dI_dy, CV_16S, 0, 1, sobelSize);
-        //preparePyramidTexturedMask(frame->pyramid_dI_dx, frame->pyramid_dI_dy,
-        //                           /*minGradientMagnitudes*/Mat(Vec4f(10,10,10,10)), frame->pyramidMask,
-        //                           maxPointsPart, frame->pyramidTexturedMask);
+
         TexturedMaskGen(frame->dI_dx, frame->dI_dy,
                         minGradientMagnitudes, frame->maskDepth,
                         maxPointsPart, frame->maskText);
 
-        //preparePyramidNormalsMask(frame->pyramidNormals, frame->pyramidMask, maxPointsPart, frame->pyramidNormalsMask);
         NormalsMaskGen(frame->normals, frame->maskDepth, maxPointsPart, frame->maskNormal);
     }
     else
-        //preparePyramidMask(frame->mask, frame->pyramidDepth, (float)minDepth, (float)maxDepth,
-        //                   frame->pyramidNormals, frame->pyramidMask);
         MaskGen(frame->mask, frame->depth, (float)minDepth, (float)maxDepth,
                 frame->normals, frame->maskDepth);
 
@@ -776,16 +445,12 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
                      const Mat& depth1, const Mat& selectMask1, float maxDepthDiff,
                      Mat& _corresps)
 {
-    CV_Assert(K.type() == CV_64FC1);
-    CV_Assert(K_inv.type() == CV_64FC1);
-    CV_Assert(Rt.type() == CV_64FC1);
-
     Mat corresps(depth1.size(), CV_16SC2, Scalar::all(-1));
 
     Rect r(0, 0, depth1.cols, depth1.rows);
     Mat Kt = Rt(Rect(3,0,1,3)).clone();
     Kt = K * Kt;
-    const double * Kt_ptr = Kt.ptr<const double>();
+    const float * Kt_ptr = Kt.ptr<const float>();
 
     AutoBuffer<float> buf(3 * (depth1.cols + depth1.rows));
     float *KRK_inv0_u1 = buf;
@@ -798,19 +463,19 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
         Mat R = Rt(Rect(0,0,3,3)).clone();
 
         Mat KRK_inv = K * R * K_inv;
-        const double * KRK_inv_ptr = KRK_inv.ptr<const double>();
+        const float * KRK_inv_ptr = KRK_inv.ptr<const float>();
         for(int u1 = 0; u1 < depth1.cols; u1++)
         {
-            KRK_inv0_u1[u1] = (float)(KRK_inv_ptr[0] * u1);
-            KRK_inv3_u1[u1] = (float)(KRK_inv_ptr[3] * u1);
-            KRK_inv6_u1[u1] = (float)(KRK_inv_ptr[6] * u1);
+            KRK_inv0_u1[u1] = (KRK_inv_ptr[0] * u1);
+            KRK_inv3_u1[u1] = (KRK_inv_ptr[3] * u1);
+            KRK_inv6_u1[u1] = (KRK_inv_ptr[6] * u1);
         }
 
         for(int v1 = 0; v1 < depth1.rows; v1++)
         {
-            KRK_inv1_v1_plus_KRK_inv2[v1] = (float)(KRK_inv_ptr[1] * v1 + KRK_inv_ptr[2]);
-            KRK_inv4_v1_plus_KRK_inv5[v1] = (float)(KRK_inv_ptr[4] * v1 + KRK_inv_ptr[5]);
-            KRK_inv7_v1_plus_KRK_inv8[v1] = (float)(KRK_inv_ptr[7] * v1 + KRK_inv_ptr[8]);
+            KRK_inv1_v1_plus_KRK_inv2[v1] = (KRK_inv_ptr[1] * v1 + KRK_inv_ptr[2]);
+            KRK_inv4_v1_plus_KRK_inv5[v1] = (KRK_inv_ptr[4] * v1 + KRK_inv_ptr[5]);
+            KRK_inv7_v1_plus_KRK_inv8[v1] = (KRK_inv_ptr[7] * v1 + KRK_inv_ptr[8]);
         }
     }
 
@@ -885,40 +550,39 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
 }
 
 typedef
-void (*CalcRgbdEquationCoeffsPtr)(double*, double, double, const Point3f&, double, double);
+void (*CalcRgbdEquationCoeffsPtr)(float*, float, float, const Point3f&, float, float);
 
 typedef
-void (*CalcICPEquationCoeffsPtr)(double*, const Point3f&, const Vec3f&);
+void (*CalcICPEquationCoeffsPtr)(float*, const Point3f&, const Vec3f&);
 
 typedef
-void (*CalcFeatureXEquationCoeffsPtr)(double*, const Point3f&, double);
+void (*CalcFeatureXEquationCoeffsPtr)(float*, const Point3f&, float);
 
 typedef
-void (*CalcFeatureYEquationCoeffsPtr)(double*, const Point3f&, double);
+void (*CalcFeatureYEquationCoeffsPtr)(float*, const Point3f&, float);
 
 
 static
 void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
                const Mat& image1, const Mat& dI_dx1, const Mat& dI_dy1,
-               //const Mat& corresps, double fx, double fy, double sobelScaleIn,
-               const Mat& corresps, float fx, float fy, double sobelScaleIn,
+               const Mat& corresps, float fx, float fy, float sobelScaleIn,
                Mat& AtA, Mat& AtB, CalcRgbdEquationCoeffsPtr func, int transformDim)
 {
-    AtA = Mat(transformDim, transformDim, CV_64FC1, Scalar(0));
-    AtB = Mat(transformDim, 1, CV_64FC1, Scalar(0));
-    double* AtB_ptr = AtB.ptr<double>();
+    AtA = Mat(transformDim, transformDim, CV_32FC1, Scalar(0));
+    AtB = Mat(transformDim, 1, CV_32FC1, Scalar(0));
+    float* AtB_ptr = AtB.ptr<float>();
 
     const int correspsCount = corresps.rows;
 
-    CV_Assert(Rt.type() == CV_64FC1);
-    const double * Rt_ptr = Rt.ptr<const double>();
+    CV_Assert(Rt.type() == CV_32FC1);
+    const float * Rt_ptr = Rt.ptr<const float>();
 
     AutoBuffer<float> diffs(correspsCount);
     float* diffs_ptr = diffs;
 
     const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
 
-    double sigma = 0;
+    float sigma = 0;
     for(int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
     {
          const Vec4i& c = corresps_ptr[correspIndex];
@@ -935,8 +599,8 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
     }
     sigma = std::sqrt(sigma/correspsCount);
 
-    std::vector<double> A_buf(transformDim);
-    double* A_ptr = &A_buf[0];
+    std::vector<float> A_buf(transformDim);
+    float* A_ptr = &A_buf[0];
 
     for(int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
     {
@@ -944,10 +608,10 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
          int u0 = c[0], v0 = c[1];
          int u1 = c[2], v1 = c[3];
 
-         double w = sigma + std::abs(diffs_ptr[correspIndex]);
+         float w = sigma + std::abs(diffs_ptr[correspIndex]);
          w = w > DBL_EPSILON ? 1./w : 1.;
 
-         double w_sobelScale = w * sobelScaleIn;
+         float w_sobelScale = w * sobelScaleIn;
 
          const Point3f& p0 = cloud0.at<Point3f>(v0,u0);
          Point3f tp0;
@@ -962,7 +626,7 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
 
         for(int y = 0; y < transformDim; y++)
         {
-            double* AtA_ptr = AtA.ptr<double>(y);
+            float* AtA_ptr = AtA.ptr<float>(y);
             for(int x = y; x < transformDim; x++)
                 AtA_ptr[x] += A_ptr[y] * A_ptr[x];
 
@@ -972,7 +636,7 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
 
     for(int y = 0; y < transformDim; y++)
         for(int x = y+1; x < transformDim; x++)
-            AtA.at<double>(x,y) = AtA.at<double>(y,x);
+            AtA.at<float>(x,y) = AtA.at<float>(y,x);
 }
 
 static
@@ -981,14 +645,14 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
                         const Mat& corresps,
                         Mat& AtA, Mat& AtB, CalcICPEquationCoeffsPtr func, int transformDim)
 {
-    AtA = Mat(transformDim, transformDim, CV_64FC1, Scalar(0));
-    AtB = Mat(transformDim, 1, CV_64FC1, Scalar(0));
-    double* AtB_ptr = AtB.ptr<double>();
+    AtA = Mat(transformDim, transformDim, CV_32FC1, Scalar(0));
+    AtB = Mat(transformDim, 1, CV_32FC1, Scalar(0));
+    float* AtB_ptr = AtB.ptr<float>();
 
     const int correspsCount = corresps.rows;
 
-    CV_Assert(Rt.type() == CV_64FC1);
-    const double * Rt_ptr = Rt.ptr<const double>();
+    CV_Assert(Rt.type() == CV_32FC1);
+    const float * Rt_ptr = Rt.ptr<const float>();
 
     AutoBuffer<float> diffs(correspsCount);
     float * diffs_ptr = diffs;
@@ -998,7 +662,7 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
 
     const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
 
-    double sigma = 0;
+    float sigma = 0;
     for(int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
     {
         const Vec4i& c = corresps_ptr[correspIndex];
@@ -1023,21 +687,21 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
 
     sigma = std::sqrt(sigma/correspsCount);
 
-    std::vector<double> A_buf(transformDim);
-    double* A_ptr = &A_buf[0];
+    std::vector<float> A_buf(transformDim);
+    float* A_ptr = &A_buf[0];
     for(int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
     {
         const Vec4i& c = corresps_ptr[correspIndex];
         int u1 = c[2], v1 = c[3];
 
-        double w = sigma + std::abs(diffs_ptr[correspIndex]);
+        float w = sigma + std::abs(diffs_ptr[correspIndex]);
         w = w > DBL_EPSILON ? 1./w : 1.;
 
         func(A_ptr, tps0_ptr[correspIndex], normals1.at<Vec3f>(v1, u1) * w);
 
         for(int y = 0; y < transformDim; y++)
         {
-            double* AtA_ptr = AtA.ptr<double>(y);
+            float* AtA_ptr = AtA.ptr<float>(y);
             for(int x = y; x < transformDim; x++)
                 AtA_ptr[x] += A_ptr[y] * A_ptr[x];
 
@@ -1047,22 +711,22 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
 
     for(int y = 0; y < transformDim; y++)
         for(int x = y+1; x < transformDim; x++)
-            AtA.at<double>(x,y) = AtA.at<double>(y,x);
+            AtA.at<float>(x,y) = AtA.at<float>(y,x);
 }
 
 
 void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
-               const Mat& corresps, double fx, double fy, double cx, double cy,
+               const Mat& corresps, float fx, float fy, float cx, float cy,
                Mat& AtA, Mat& AtB, CalcFeatureXEquationCoeffsPtr func_x, CalcFeatureYEquationCoeffsPtr func_y, int transformDim)
 {
-    AtA = Mat(transformDim, transformDim, CV_64FC1, Scalar(0));
-    AtB = Mat(transformDim, 1, CV_64FC1, Scalar(0));
-    double* AtB_ptr = AtB.ptr<double>();
+    AtA = Mat(transformDim, transformDim, CV_32FC1, Scalar(0));
+    AtB = Mat(transformDim, 1, CV_32FC1, Scalar(0));
+    float* AtB_ptr = AtB.ptr<float>();
 
     const int correspsCount = corresps.rows;
 
-    CV_Assert(Rt.type() == CV_64FC1);
-    const double * Rt_ptr = Rt.ptr<const double>();
+    CV_Assert(Rt.type() == CV_32FC1);
+    const float * Rt_ptr = Rt.ptr<const float>();
 
     AutoBuffer<float> diffs_x(correspsCount);
     AutoBuffer<float> diffs_y(correspsCount);
@@ -1074,8 +738,8 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
 
     const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
 
-    double sigma_x = 0;
-    double sigma_y = 0;
+    float sigma_x = 0;
+    float sigma_y = 0;
     for(int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
     {
         const Vec4i& c = corresps_ptr[correspIndex];
@@ -1103,14 +767,14 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
     sigma_x = std::sqrt(sigma_x/correspsCount);
     sigma_y = std::sqrt(sigma_y/correspsCount);
 
-    std::vector<double> A_buf_x(transformDim);
-    std::vector<double> A_buf_y(transformDim);
-    double* A_ptr_x = &A_buf_x[0];
-    double* A_ptr_y = &A_buf_y[0];
+    std::vector<float> A_buf_x(transformDim);
+    std::vector<float> A_buf_y(transformDim);
+    float* A_ptr_x = &A_buf_x[0];
+    float* A_ptr_y = &A_buf_y[0];
     for(int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
     {
-        double w_x = sigma_x + std::abs(diffs_x_ptr[correspIndex]);
-        double w_y = sigma_y + std::abs(diffs_y_ptr[correspIndex]);
+        float w_x = sigma_x + std::abs(diffs_x_ptr[correspIndex]);
+        float w_y = sigma_y + std::abs(diffs_y_ptr[correspIndex]);
         w_x = w_x > DBL_EPSILON ? 1./w_x : 1.;
         w_y = w_y > DBL_EPSILON ? 1./w_y : 1.;
 
@@ -1119,7 +783,7 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
 
         for(int y = 0; y < transformDim; y++)
         {
-            double* AtA_ptr = AtA.ptr<double>(y);
+            float* AtA_ptr = AtA.ptr<float>(y);
             for(int x = y; x < transformDim; x++)
                 AtA_ptr[x] += A_ptr_x[y] * A_ptr_x[x] + A_ptr_y[y] * A_ptr_y[x];
 
@@ -1129,14 +793,14 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
 
     for(int y = 0; y < transformDim; y++)
         for(int x = y+1; x < transformDim; x++)
-            AtA.at<double>(x,y) = AtA.at<double>(y,x);
+            AtA.at<float>(x,y) = AtA.at<float>(y,x);
 
 }
 
 static
-bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
+bool solveSystem(const Mat& AtA, const Mat& AtB, float detThreshold, Mat& x)
 {
-    double det = determinant(AtA);
+    float det = determinant(AtA);
 
     if(fabs (det) < detThreshold || cvIsNaN(det) || cvIsInf(det))
         return false;
@@ -1147,14 +811,14 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
 }
 
 static
-bool testDeltaTransformation(const Mat& deltaRt, double maxTranslation, double maxRotation)
+bool testDeltaTransformation(const Mat& deltaRt, float maxTranslation, float maxRotation)
 {
-    double translation = norm(deltaRt(Rect(3, 0, 1, 3)));
+    float translation = norm(deltaRt(Rect(3, 0, 1, 3)));
 
     Mat rvec;
     Rodrigues(deltaRt(Rect(0,0,3,3)), rvec);
 
-    double rotation = norm(rvec) * 180. / CV_PI;
+    float rotation = norm(rvec) * 180. / CV_PI;
 
     return translation <= maxTranslation && rotation <= maxRotation;
 }
@@ -1162,11 +826,11 @@ bool testDeltaTransformation(const Mat& deltaRt, double maxTranslation, double m
 static
 void computeProjectiveMatrix(const Mat& ksi, Mat& Rt)
 {
-    CV_Assert(ksi.size() == Size(1,6) && ksi.type() == CV_64FC1);
+    CV_Assert(ksi.size() == Size(1,6) && ksi.type() == CV_32FC1);
 
 #ifdef HAVE_EIGEN3_HERE
-    const double* ksi_ptr = ksi.ptr<const double>();
-    Eigen::Matrix<double,4,4> twist, g;
+    const float* ksi_ptr = ksi.ptr<const float>();
+    Eigen::Matrix<float,4,4> twist, g;
     twist << 0.,          -ksi_ptr[2], ksi_ptr[1],  ksi_ptr[3],
              ksi_ptr[2],  0.,          -ksi_ptr[0], ksi_ptr[4],
              -ksi_ptr[1], ksi_ptr[0],  0,           ksi_ptr[5],
@@ -1177,23 +841,23 @@ void computeProjectiveMatrix(const Mat& ksi, Mat& Rt)
 #else
     // TODO: check computeProjectiveMatrix when there is not eigen library,
     //       because it gives less accurate pose of the camera
-    Rt = Mat::eye(4, 4, CV_64FC1);
+    Rt = Mat::eye(4, 4, CV_32FC1);
 
     Mat R = Rt(Rect(0,0,3,3));
     Mat rvec = ksi.rowRange(0,3);
 
     Rodrigues(rvec, R);
 
-    Rt.at<double>(0,3) = ksi.at<double>(3);
-    Rt.at<double>(1,3) = ksi.at<double>(4);
-    Rt.at<double>(2,3) = ksi.at<double>(5);
+    Rt.at<float>(0,3) = ksi.at<float>(3);
+    Rt.at<float>(1,3) = ksi.at<float>(4);
+    Rt.at<float>(2,3) = ksi.at<float>(5);
 #endif
 }
 
 static inline
-void calcRgbdEquationCoeffs(double* C, double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
+void calcRgbdEquationCoeffs(float* C, float dIdx, float dIdy, const Point3f& p3d, float fx, float fy)
 {
-    double invz  = 1. / p3d.z,
+    float invz  = 1. / p3d.z,
            v0 = dIdx * fx * invz,
            v1 = dIdy * fy * invz,
            v2 = -(v0 * p3d.x + v1 * p3d.y) * invz;
@@ -1207,7 +871,7 @@ void calcRgbdEquationCoeffs(double* C, double dIdx, double dIdy, const Point3f& 
 }
 
 static inline
-void calcICPEquationCoeffs(double* C, const Point3f& p0, const Vec3f& n1)
+void calcICPEquationCoeffs(float* C, const Point3f& p0, const Vec3f& n1)
 {
     C[0] = -p0.z * n1[1] + p0.y * n1[2];
     C[1] =  p0.z * n1[0] - p0.x * n1[2];
@@ -1218,9 +882,9 @@ void calcICPEquationCoeffs(double* C, const Point3f& p0, const Vec3f& n1)
 }
 
 static inline
-void calcFeatureXEquationCoeffs(double* C, const Point3f& p3d, double fx)
+void calcFeatureXEquationCoeffs(float* C, const Point3f& p3d, float fx)
 {
-    double invz  = 1. / p3d.z;
+    float invz  = 1. / p3d.z;
 
     C[0] = -(fx * p3d.x * p3d.y * invz * invz);
     C[1] = fx + fx * p3d.x * p3d.x * invz * invz;
@@ -1231,9 +895,9 @@ void calcFeatureXEquationCoeffs(double* C, const Point3f& p3d, double fx)
 }
 
 static inline
-void calcFeatureYEquationCoeffs(double* C, const Point3f& p3d, double fy)
+void calcFeatureYEquationCoeffs(float* C, const Point3f& p3d, float fy)
 {
-    double invz  = 1. / p3d.z;
+    float invz  = 1. / p3d.z;
 
     C[0] = -fy - (fy * p3d.y * p3d.y * invz * invz);
     C[1] = fy * p3d.x * p3d.x * invz * invz;
@@ -1261,34 +925,24 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
 
     const int minOverdetermScale = 20;
     const int minCorrespsCount = minOverdetermScale * transformDim;
-    //const float icpWeight = 10.0;
 
-    std::vector<Mat> pyramidCameraMatrix;
-    buildPyramidCameraMatrix(cameraMatrix, (int)iterCounts_vec.size(), pyramidCameraMatrix);
-
-    Mat resultRt = initRt.empty() ? Mat::eye(4,4,CV_64FC1) : initRt.clone();
+    Mat resultRt = initRt.empty() ? Mat::eye(4,4,CV_32FC1) : initRt.clone();
     Mat currRt, ksi;
 
     bool isOk = false;
     //for(int level = (int)iterCounts_vec.size() - 1; level >= 0; level--)
     for(int level = 0; level == 0; level++)
     {
-        const Mat& levelCameraMatrix = pyramidCameraMatrix[level];
+        const Mat& levelCameraMatrix = cameraMatrix;
         const Mat& levelCameraMatrix_inv = levelCameraMatrix.inv(DECOMP_SVD);
-        //const Mat& srcLevelDepth = srcFrame->pyramidDepth[level];
-        //const Mat& dstLevelDepth = dstFrame->pyramidDepth[level];
         const Mat& srcLevelDepth = srcFrame->depth;
         const Mat& dstLevelDepth = dstFrame->depth;
 
-        const double fx = levelCameraMatrix.at<double>(0,0);
-        const double fy = levelCameraMatrix.at<double>(1,1);
-        const double cx = levelCameraMatrix.at<double>(0,2);
-        const double cy = levelCameraMatrix.at<double>(1,2);
-        //const float fx = levelCameraMatrix.at<float>(0,0);
-        //const float fy = levelCameraMatrix.at<float>(1,1);
-        //const float cx = levelCameraMatrix.at<float>(0,2);
-        //const float cy = levelCameraMatrix.at<float>(1,2);
-        const double determinantThreshold = 1e-6;
+        const float fx = levelCameraMatrix.at<float>(0,0);
+        const float fy = levelCameraMatrix.at<float>(1,1);
+        const float cx = levelCameraMatrix.at<float>(0,2);
+        const float cy = levelCameraMatrix.at<float>(1,2);
+        const float determinantThreshold = 1e-6;
 
         Mat AtA_rgbd, AtB_rgbd, AtA_icp, AtB_icp;
         Mat corresps_rgbd, corresps_icp;
@@ -1296,12 +950,11 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
         // Run transformation search on current level iteratively.
         for(int iter = 0; iter < iterCounts_vec[level]; iter ++)
         {
-            Mat AtA(transformDim, transformDim, CV_64FC1, Scalar(0)), AtB(transformDim, 1, CV_64FC1, Scalar(0));
+            Mat AtA(transformDim, transformDim, CV_32FC1, Scalar(0)), AtB(transformDim, 1, CV_32FC1, Scalar(0));
             if(iter>=5){
                 Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
 
                 int v_rgbd = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
-                                             //srcLevelDepth, srcFrame->pyramidMask[level], dstLevelDepth, dstFrame->pyramidTexturedMask[level],
                                              srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskText,
                                              maxDepthDiff, corresps_rgbd);
                 if (v_rgbd > v_max)
@@ -1309,13 +962,10 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                 //cout << "v_rgbd" << v_rgbd << endl;
                 //exit(1);
                 int v_icp = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
-                                            //srcLevelDepth, srcFrame->pyramidMask[level], dstLevelDepth, dstFrame->pyramidNormalsMask[level],
                                             srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskNormal,
                                             maxDepthDiff, corresps_icp);
                 if(corresps_rgbd.rows >= minCorrespsCount)
                 {
-                    //calcRgbdLsmMatrices(srcFrame->pyramidImage[level], srcFrame->pyramidCloud[level], resultRt,
-                    //                    dstFrame->pyramidImage[level], dstFrame->pyramid_dI_dx[level], dstFrame->pyramid_dI_dy[level],
                     calcRgbdLsmMatrices(srcFrame->image, srcFrame->cloud, resultRt,
                                         dstFrame->image, dstFrame->dI_dx, dstFrame->dI_dy,
                                         corresps_rgbd, fx, fy, sobelScale,
@@ -1327,20 +977,15 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
 
                 if(corresps_icp.rows >= minCorrespsCount)
                 {
-                    //calcICPLsmMatrices(srcFrame->pyramidCloud[level], resultRt,
-                    //                   dstFrame->pyramidCloud[level], dstFrame->pyramidNormals[level],
                     calcICPLsmMatrices(srcFrame->cloud, resultRt,
                                        dstFrame->cloud, dstFrame->normals,
                                        corresps_icp, AtA_icp, AtB_icp, icpEquationFuncPtr, transformDim);
-                    //AtA += icpWeight * icpWeight * AtA_icp;
-                    //AtB += icpWeight * AtB_icp;
                     AtA += AtA_icp;
                     AtB += AtB_icp;
                 }
             }
             else 
             {
-               //bool solutionExist = solveSystem(AtA, AtB, determinantThreshold, ksi);
                ///////////////////////////////////////////////
                std::vector<KeyPoint> keypoints_1, keypoints_2;
                Mat descriptors_1, descriptors_2;
@@ -1370,7 +1015,6 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                {
                    if ( matches[i].distance <= max ( 2*min_dist, 30.0f ) )
                    {
-                       //if(srcFrame->pyramidMask[level].at<uchar>(keypoints_1[matches[i].queryIdx].pt.y, keypoints_1[matches[i].queryIdx].pt.x))
                        if(srcFrame->maskDepth.at<uchar>(keypoints_1[matches[i].queryIdx].pt.y, keypoints_1[matches[i].queryIdx].pt.x))
                            good_matches.push_back ( matches[i] );
                    }
@@ -1402,7 +1046,6 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                //exit(1);
 
                Mat AtA_feature, AtB_feature;
-               //calcFeatureLsmMatrices(srcFrame->pyramidCloud[level], resultRt,
                calcFeatureLsmMatrices(srcFrame->cloud, resultRt,
                                      corresps_feature, fx, fy, cx, cy,
                                      AtA_feature, AtB_feature, featureXEquationFuncPtr, featureYEquationFuncPtr, transformDim);
