@@ -81,7 +81,8 @@ using namespace cv;
     static inline float
     DEFAULT_MAX_POINTS_PART()
     {
-      return 0.07f; // in [0, 1]
+      //return 0.07f; // in [0, 1]
+      return 1; // in [0, 1]
     }
     static inline float
     DEFAULT_MAX_TRANSLATION()
@@ -173,7 +174,7 @@ using namespace cv;
     }
 
     bool
-    compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFrame, Mat& Rt, const Mat& initRt = Mat()) const;
+    compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFrame, Mat& Rt, int& v_max, const Mat& initRt = Mat()) const;
 
     Size prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const;
 

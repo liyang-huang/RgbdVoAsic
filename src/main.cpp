@@ -46,7 +46,7 @@ private:
 };
 
 static
-void writeResults( const string& filename, const vector<string>& timestamps, const vector<Mat>& Rt )
+void writeResults( const string& filename, const vector<string>& timestamps, const vector<Mat>& Rt, const int &v_max )
 {
     CV_Assert( timestamps.size() == Rt.size() );
 
@@ -81,6 +81,7 @@ void writeResults( const string& filename, const vector<string>& timestamps, con
              << rvec.at<double>(0) << " " << rvec.at<double>(1) << " " << rvec.at<double>(2) << " " << cos_alpha2 << endl;
 
     }
+    file << v_max << endl;
     file.close();
 }
 
@@ -109,6 +110,8 @@ int main(int argc, char** argv)
         return -1;
     }
     
+    int v_max = 0;
+
     vector<string> timestamps;
     vector<Mat> Rts;
 
@@ -208,7 +211,7 @@ int main(int argc, char** argv)
                 MyTickMeter tm;
                 tm.start();
                 gtm.start();
-                bool res = odometry.compute(frame_curr, frame_prev, Rt);
+                bool res = odometry.compute(frame_curr, frame_prev, Rt, v_max);
                 gtm.stop();
                 tm.stop();
                 count++;
@@ -236,7 +239,8 @@ int main(int argc, char** argv)
     }
 
     std::cout << "Average time " << gtm.getTimeSec()/count << std::endl;
-    writeResults(argv[2], timestamps, Rts);
+    writeResults(argv[2], timestamps, Rts, v_max);
+    std::cout << "v_max " << v_max << std::endl;
 
     return 0;
 }

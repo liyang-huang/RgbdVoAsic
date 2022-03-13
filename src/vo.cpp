@@ -8,6 +8,7 @@
 using namespace cv;
 using namespace std;
 //
+const int maxLineDiff = 70;
 const int sobelSize = 3;
 const double sobelScale = 1./8.;
 
@@ -645,7 +646,7 @@ Size Odometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
 }
 
 static
-void computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
+int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
                      const Mat& depth0, const Mat& validMask0,
                      const Mat& depth1, const Mat& selectMask1, float maxDepthDiff,
                      Mat& _corresps)
@@ -712,7 +713,7 @@ void computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
                     if(r.contains(Point(u0,v0)))
                     {
                         float d0 = depth0.at<float>(v0,u0);
-                        if(validMask0.at<uchar>(v0, u0) && std::abs(transformed_d1 - d0) <= maxDepthDiff)
+                        if(validMask0.at<uchar>(v0, u0) && std::abs(transformed_d1 - d0) <= maxDepthDiff && std::abs(v1 - v0) <= maxLineDiff)
                         {
                             CV_DbgAssert(!cvIsNaN(d0));
                             Vec2s& c = corresps.at<Vec2s>(v0,u0);
@@ -737,6 +738,7 @@ void computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
         }
     }
 
+    int v_max_corr = 0;
     _corresps.create(correspCount, 1, CV_32SC4);
     Vec4i * corresps_ptr = _corresps.ptr<Vec4i>();
     for(int v0 = 0, i = 0; v0 < corresps.rows; v0++)
@@ -746,9 +748,15 @@ void computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
         {
             const Vec2s& c = corresps_row[u0];
             if(c[0] != -1)
+            {
                 corresps_ptr[i++] = Vec4i(u0,v0,c[0],c[1]);
+                int v_diff = abs(v0-c[1]);
+                if(v_diff > v_max_corr)
+                    v_max_corr = v_diff;
+            }
         }
     }
+    return v_max_corr;
 }
 
 typedef
@@ -1110,7 +1118,7 @@ void calcFeatureYEquationCoeffs(double* C, const Point3f& p3d, double fy)
     C[5] = -(fy * p3d.y * invz * invz);
 }
 
-bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFrame, Mat& Rt, const Mat& initRt) const
+bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFrame, Mat& Rt, int& v_max, const Mat& initRt) const
 {
     Size srcSize = prepareFrameCache(srcFrame, OdometryFrame::CACHE_SRC);
     Size dstSize = prepareFrameCache(dstFrame, OdometryFrame::CACHE_DST);
@@ -1165,14 +1173,21 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
             if(iter>=0){
                 Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
 
-                computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
+                int v_rgbd = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
                                 srcLevelDepth, srcFrame->pyramidMask[level], dstLevelDepth, dstFrame->pyramidTexturedMask[level],
                                 maxDepthDiff, corresps_rgbd);
-                
-                computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
+                if (v_rgbd > v_max)
+                    v_max = v_rgbd;
+                //cout << "v_rgbd" << v_rgbd << endl;
+                //exit(1);
+                int v_icp = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
                                 srcLevelDepth, srcFrame->pyramidMask[level], dstLevelDepth, dstFrame->pyramidNormalsMask[level],
                                 maxDepthDiff, corresps_icp);
                 
+                if (v_icp > v_max)
+                    v_max = v_icp;
+                //cout << "v_icp" << v_icp << endl;
+
                 if(corresps_rgbd.rows >= minCorrespsCount)
                 {
                     calcRgbdLsmMatrices(srcFrame->pyramidImage[level], srcFrame->pyramidCloud[level], resultRt,
@@ -1283,6 +1298,7 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
         }
     }
 
+    //cout << "v_max" << v_max << endl;
     Rt = resultRt;
 
     if(isOk)
