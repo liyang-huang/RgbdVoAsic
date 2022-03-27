@@ -2,12 +2,23 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
 #include <iostream>
+#include <gmpxx.h>
+#include <gmp.h>
+#include <cmath>
 
 #include "vo.hpp"
 
 using namespace cv;
 using namespace std;
 //
+const int sign = 1;
+//const int bit_width = 60; //have to less than FIXP_INT_SCALAR_TYPE? Can't use 64 for 1LL
+//const int shift = 14;
+const int bit_width = 63; //have to less than FIXP_INT_SCALAR_TYPE? Can't use 64 for 1LL
+const int shift = 12;
+const FixedPointConfig fpconfig(sign, bit_width, shift);
+//
+
 const int maxLineDiff = 70;
 const int sobelSize = 3;
 const float sobelScale = 1./8.;
@@ -28,6 +39,7 @@ void setDefaultMinGradientMagnitudes(Mat& minGradientMagnitudes)
     minGradientMagnitudes = Mat(Vec4f(10,10,10,10));
 }
 */
+/*
 static
 void normalsComputer(const Mat& points3d, int rows, int cols, Mat & normals) 
 {
@@ -46,6 +58,44 @@ void normalsComputer(const Mat& points3d, int rows, int cols, Mat & normals)
     }
   }
 }
+*/
+static
+vector<FixedPointVector> normalsComputer(vector<FixedPointVector>& p3d_vec, int rows, int cols) 
+{
+  FixedPointScalar zero_value((FIXP_SCALAR_TYPE)0, fpconfig);
+  FixedPointVector zero_vec(zero_value, zero_value, zero_value);
+  vector<FixedPointVector> normals(rows*cols, zero_vec);
+  for (int y = 0; y < rows - 1; ++y)
+  {
+    for (int x = 0; x < cols - 1; ++x)
+    {
+            FixedPointScalar du_x = p3d_vec[y*cols + (x+1)].x - p3d_vec[y*cols + x].x;
+            FixedPointScalar dv_x = p3d_vec[(y+1)*cols + x].x - p3d_vec[y*cols + x].x;
+            FixedPointScalar du_y = p3d_vec[y*cols + (x+1)].y - p3d_vec[y*cols + x].y;
+            FixedPointScalar dv_y = p3d_vec[(y+1)*cols + x].y - p3d_vec[y*cols + x].y;
+            FixedPointScalar du_z = p3d_vec[y*cols + (x+1)].z - p3d_vec[y*cols + x].z;
+            FixedPointScalar dv_z = p3d_vec[(y+1)*cols + x].z - p3d_vec[y*cols + x].z;
+            FixedPointScalar n_x = (du_y * dv_z) - (du_z * dv_y);
+            FixedPointScalar n_y = (du_z * dv_x) - (du_x * dv_z);
+            FixedPointScalar n_z = (du_x * dv_y) - (du_y * dv_x);
+            FixedPointScalar n2_x = n_x*n_x;
+            FixedPointScalar n2_y = n_y*n_y;
+            FixedPointScalar n2_z = n_z*n_z;
+            FixedPointScalar norm_pre = n2_x + n2_y + n2_z;
+            FixedPointScalar norm = (norm_pre).sqrt();
+            if(!(mpz_get_si(norm.big_value)==0))
+            {
+                FixedPointScalar n_x_final = n_x / norm;
+                FixedPointScalar n_y_final = n_y / norm;
+                FixedPointScalar n_z_final = n_z / norm;
+                FixedPointVector normal(n_x_final, n_y_final, n_z_final);   
+                normals[y*cols + x] = normal;
+            }
+    }
+  }
+  return normals;
+}
+
 
 RgbdFrame::RgbdFrame() : ID(-1)
 {}
@@ -171,13 +221,14 @@ depthTo3dNoMask(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& points3d
 
   // Build z
   cv::Mat_<T> z_mat;
+  cout << "liyang test" << in_depth.depth() << endl;
+  cout << "liyang test" << z_mat.depth() << endl;
+  exit(1);
   if (z_mat.depth() == in_depth.depth())
     z_mat = in_depth;
   else
     rescaleDepthTemplated<T>(in_depth, z_mat);
 
-  //cout << "liyang test" << in_depth << endl;
-  //exit(1);
   // Pre-compute some constants
   cv::Mat_<T> x_cache(1, in_depth.cols), y_cache(in_depth.rows, 1);
   T* x_cache_ptr = x_cache[0], *y_cache_ptr = y_cache[0];
@@ -206,6 +257,43 @@ depthTo3dNoMask(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& points3d
   }
 }
 
+vector<FixedPointVector> depthTo3d(const vector<FixedPointScalar>& depth, const Mat& K, int rows, int cols)
+{
+  vector<FixedPointScalar> cam_fixp;
+  cam_fixp = f_Mat2Vec(K, fpconfig);
+  FixedPointScalar fx =cam_fixp[0];
+  FixedPointScalar fy =cam_fixp[4];
+  FixedPointScalar cx =cam_fixp[2];
+  FixedPointScalar cy =cam_fixp[5];
+  vector<FixedPointScalar> depth_vec;
+
+  // Create 3D points in one go.
+  vector<FixedPointVector> p3d_vec;
+  vector<FixedPointScalar> x_cache;
+  vector<FixedPointScalar> y_cache;
+  for (int x = 0; x < cols; ++x)
+  {
+    FixedPointScalar p_x((FIXP_SCALAR_TYPE)x, fpconfig);
+     x_cache.push_back((p_x - cx) / fx);
+  }
+  for (int y = 0; y < rows; ++y)
+  {
+    FixedPointScalar p_y((FIXP_SCALAR_TYPE)y, fpconfig);
+     y_cache.push_back((p_y - cy) / fy);
+  }
+  for (int y = 0; y < rows; ++y)
+  {
+    for (int x = 0; x < cols; ++x)
+    {
+         FixedPointVector p3d(x_cache[x]*depth[y*cols + x] , y_cache[y]*depth[y*cols + x], depth[y*cols + x]);
+         p3d_vec.push_back(p3d);
+    }
+  }
+
+  return p3d_vec;
+}
+
+/*
 void
 depthTo3d(InputArray depth_in, InputArray K_in, OutputArray points3d_out)
 {
@@ -229,7 +317,20 @@ depthTo3d(InputArray depth_in, InputArray K_in, OutputArray points3d_out)
   cv::Mat points3d = points3d_out.getMat();
   depthTo3dNoMask<float>(depth, K_new, points3d);
 }
+*/
+/*
+depthTo3d(const cv::Mat& in_depth, const cv::Mat_<float>& K, cv::Mat& points3d)
+{
+  points3d.create(in_depth.size(), CV_MAKETYPE(in_depth.depth(), 3));
+  const T inv_fx = T(1) / K(0, 0);
+  const T inv_fy = T(1) / K(1, 1);
+  const T ox = K(0, 2);
+  const T oy = K(1, 2);
 
+  FixedPointScalar 
+
+}
+*/
 static
 void randomSubsetOfMask(Mat& mask, float part)
 {
@@ -275,6 +376,8 @@ void checkDepth(const Mat& depth, const Size& imageSize)
         CV_Error(Error::StsBadSize, "Depth has to have the size equal to the image size.");
     if(depth.type() != CV_32FC1)
         CV_Error(Error::StsBadSize, "Depth type has to be CV_32FC1.");
+    //if(depth.type() != CV_32SC1)
+    //    CV_Error(Error::StsBadSize, "Depth type has to be CV_32SC1.");
 }
 
 static inline
@@ -323,18 +426,18 @@ void MaskGen(const Mat& mask, const Mat& Depth, float minDepth, float maxDepth,
 
         maskDepth &= (levelDepth > minDepth) & (levelDepth < maxDepth);
 
-        if(!Normal.empty())
-        {
-            Mat validNormalMask = Normal == Normal; // otherwise it's Nan
-            
-            CV_Assert(validNormalMask.type() == CV_8UC3);
+        //if(!Normal.empty())
+        //{
+        //    Mat validNormalMask = Normal == Normal; // otherwise it's Nan
+        //    
+        //    CV_Assert(validNormalMask.type() == CV_8UC3);
 
-            std::vector<Mat> channelMasks;
-            split(validNormalMask, channelMasks);
-            validNormalMask = channelMasks[0] & channelMasks[1] & channelMasks[2];
+        //    std::vector<Mat> channelMasks;
+        //    split(validNormalMask, channelMasks);
+        //    validNormalMask = channelMasks[0] & channelMasks[1] & channelMasks[2];
 
-            maskDepth &= validNormalMask;
-        }
+        //    maskDepth &= validNormalMask;
+        //}
     }
 }
 
@@ -367,7 +470,7 @@ void TexturedMaskGen(const Mat& dI_dx, const Mat& dI_dy,
         }
         texturedMask = texturedMask_pre & Mask;
 
-        randomSubsetOfMask(texturedMask, (float)maxPointsPart);
+        //randomSubsetOfMask(texturedMask, (float)maxPointsPart);
     }
 }
 
@@ -382,21 +485,21 @@ void NormalsMaskGen(const Mat& normals, const Mat& Mask, float maxPointsPart,
     else
     {
         maskNormal = Mask.clone();
-        for(int y = 0; y < maskNormal.rows; y++)
-        {
-            const Vec3f *normals_row = normals.ptr<Vec3f>(y);
-            uchar *normalsMask_row = maskNormal.ptr<uchar>(y);
-            for(int x = 0; x < maskNormal.cols; x++)
-            {
-                Vec3f n = normals_row[x];
-                if(cvIsNaN(n[0]))
-                {
-                    CV_DbgAssert(cvIsNaN(n[1]) && cvIsNaN(n[2]));
-                    normalsMask_row[x] = 0;
-                }
-            }
-        }
-        randomSubsetOfMask(maskNormal, (float)maxPointsPart);
+        //for(int y = 0; y < maskNormal.rows; y++)
+        //{
+        //    const Vec3f *normals_row = normals.ptr<Vec3f>(y);
+        //    uchar *normalsMask_row = maskNormal.ptr<uchar>(y);
+        //    for(int x = 0; x < maskNormal.cols; x++)
+        //    {
+        //        Vec3f n = normals_row[x];
+        //        if(cvIsNaN(n[0]))
+        //        {
+        //            CV_DbgAssert(cvIsNaN(n[1]) && cvIsNaN(n[2]));
+        //            normalsMask_row[x] = 0;
+        //        }
+        //    }
+        //}
+        //randomSubsetOfMask(maskNormal, (float)maxPointsPart);
     }
 }
 
@@ -404,41 +507,65 @@ void NormalsMaskGen(const Mat& normals, const Mat& Mask, float maxPointsPart,
 Size Odometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
 {
     
+    if(frame->normals.empty())
+    {
     checkImage(frame->image);
 
     checkDepth(frame->depth, frame->image.size());
     
     checkMask(frame->mask, frame->image.size());
    
-    depthTo3d(frame->depth, cameraMatrix, frame->cloud);
+    //depthTo3d(frame->depth, cameraMatrix, frame->cloud);
+    //std::cout << frame->depth.at<float>(0,0) <<  std::endl;
+    frame->depth_vec = f_Mat2Vec(frame->depth, fpconfig);
+    frame->cloud_vec = depthTo3d(frame->depth_vec, cameraMatrix, frame->depth.rows, frame->depth.cols);
+    frame->cloud = PVec2Mat_f(frame->cloud_vec, frame->depth.rows, frame->depth.cols);
 
-    if(cacheType & OdometryFrame::CACHE_DST)
-    {
-        if(frame->normals.empty())
-        {
-                normalsComputer(frame->cloud, frame->depth.rows, frame->depth.cols, frame->normals);
-        }
-        checkNormals(frame->normals, frame->depth.size());
+    //if(cacheType & OdometryFrame::CACHE_DST)
+    //{
+    //    if(frame->normals.empty())
+    //    {
+    //            //normalsComputer(frame->cloud, frame->depth.rows, frame->depth.cols, frame->normals);
+    //            vector<FixedPointVector> normals_vec = normalsComputer(frame->cloud_vec, frame->depth.rows, frame->depth.cols);
+    //            frame->normals = PVec2Mat_f(normals_vec, frame->depth.rows, frame->depth.cols);
+    //    }
+    //    checkNormals(frame->normals, frame->depth.size());
 
-        MaskGen(frame->mask, frame->depth, (float)minDepth, (float)maxDepth,
-                frame->normals, frame->maskDepth);
+    //    MaskGen(frame->mask, frame->depth, (float)minDepth, (float)maxDepth,
+    //            frame->normals, frame->maskDepth);
 
-        Sobel(frame->image, frame->dI_dx, CV_16S, 1, 0, sobelSize);
-        Sobel(frame->image, frame->dI_dy, CV_16S, 0, 1, sobelSize);
+    //    Sobel(frame->image, frame->dI_dx, CV_16S, 1, 0, sobelSize);
+    //    Sobel(frame->image, frame->dI_dy, CV_16S, 0, 1, sobelSize);
 
-        TexturedMaskGen(frame->dI_dx, frame->dI_dy,
-                        minGradientMagnitudes, frame->maskDepth,
-                        maxPointsPart, frame->maskText);
+    //    TexturedMaskGen(frame->dI_dx, frame->dI_dy,
+    //                    minGradientMagnitudes, frame->maskDepth,
+    //                    maxPointsPart, frame->maskText);
 
-        NormalsMaskGen(frame->normals, frame->maskDepth, maxPointsPart, frame->maskNormal);
+    //    NormalsMaskGen(frame->normals, frame->maskDepth, maxPointsPart, frame->maskNormal);
+    //}
+    //else
+    //    MaskGen(frame->mask, frame->depth, (float)minDepth, (float)maxDepth,
+    //            frame->normals, frame->maskDepth);
+
+    frame->normals_vec = normalsComputer(frame->cloud_vec, frame->depth.rows, frame->depth.cols);
+    frame->normals = PVec2Mat_f(frame->normals_vec, frame->depth.rows, frame->depth.cols);
+
+    MaskGen(frame->mask, frame->depth, (float)minDepth, (float)maxDepth,
+            frame->normals, frame->maskDepth);
+
+    Sobel(frame->image, frame->dI_dx, CV_16S, 1, 0, sobelSize);
+    Sobel(frame->image, frame->dI_dy, CV_16S, 0, 1, sobelSize);
+
+    TexturedMaskGen(frame->dI_dx, frame->dI_dy,
+                    minGradientMagnitudes, frame->maskDepth,
+                    maxPointsPart, frame->maskText);
+
+    NormalsMaskGen(frame->normals, frame->maskDepth, maxPointsPart, frame->maskNormal);
     }
-    else
-        MaskGen(frame->mask, frame->depth, (float)minDepth, (float)maxDepth,
-                frame->normals, frame->maskDepth);
-
     return frame->image.size();
 }
 
+/*
 static
 int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
                      const Mat& depth0, const Mat& validMask0,
@@ -548,6 +675,127 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
     }
     return v_max_corr;
 }
+*/
+static
+int  computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
+                     const vector<FixedPointScalar>& d0_vec, const Mat& validMask0,
+                     const vector<FixedPointScalar>& d1_vec, const Mat& selectMask1, float maxDepthDiff, int rows, int cols,
+                     Mat& _corresps)
+{
+
+  FixedPointScalar fx (K.at<float>(0,0), fpconfig);//float
+  FixedPointScalar fy (K.at<float>(1,1), fpconfig);//float
+  FixedPointScalar cx (K.at<float>(0,2), fpconfig);//float
+  FixedPointScalar cy (K.at<float>(1,2), fpconfig);//float
+  FixedPointScalar fx_inv (K_inv.at<float>(0,0), fpconfig);//float
+  FixedPointScalar fy_inv (K_inv.at<float>(1,1), fpconfig);//float
+  FixedPointScalar cx_inv (K_inv.at<float>(0,2), fpconfig);//float
+  FixedPointScalar cy_inv (K_inv.at<float>(1,2), fpconfig);//float
+
+  vector<FixedPointScalar> Rt_vec;
+  Rt_vec = f_Mat2Vec(Rt, fpconfig);
+
+  FixedPointScalar RK_inv_00 = Rt_vec[0]*fx_inv;
+  FixedPointScalar RK_inv_01 = Rt_vec[1]*fy_inv;
+  FixedPointScalar RK_inv_02 = Rt_vec[0]*cx_inv + Rt_vec[1]*cy_inv + Rt_vec[2];
+  FixedPointScalar RK_inv_10 = Rt_vec[4]*fx_inv;
+  FixedPointScalar RK_inv_11 = Rt_vec[5]*fy_inv;
+  FixedPointScalar RK_inv_12 = Rt_vec[4]*cx_inv + Rt_vec[5]*cy_inv + Rt_vec[6];
+  FixedPointScalar RK_inv_20 = Rt_vec[8]*fx_inv;
+  FixedPointScalar RK_inv_21 = Rt_vec[9]*fy_inv;
+  FixedPointScalar RK_inv_22 = Rt_vec[8]*cx_inv + Rt_vec[9]*cy_inv + Rt_vec[10];
+  
+  FixedPointScalar KRK_inv_00 = fx*RK_inv_00 + cx*RK_inv_20;
+  FixedPointScalar KRK_inv_01 = fx*RK_inv_01 + cx*RK_inv_21;
+  FixedPointScalar KRK_inv_02 = fx*RK_inv_02 + cx*RK_inv_22;
+  FixedPointScalar KRK_inv_10 = fy*RK_inv_10 + cy*RK_inv_20;
+  FixedPointScalar KRK_inv_11 = fy*RK_inv_11 + cy*RK_inv_21;
+  FixedPointScalar KRK_inv_12 = fy*RK_inv_12 + cy*RK_inv_22;
+  FixedPointScalar KRK_inv_20 = RK_inv_20;
+  FixedPointScalar KRK_inv_21 = RK_inv_21;
+  FixedPointScalar KRK_inv_22 = RK_inv_22;
+  FixedPointScalar Kt_0 = fx*Rt_vec[3] + cx*Rt_vec[11];
+  FixedPointScalar Kt_1 = fy*Rt_vec[7] + cy*Rt_vec[11];
+  FixedPointScalar Kt_2 = Rt_vec[11];
+  int correspCount = 0;
+  Mat corresps(rows, cols, CV_16SC2, Scalar::all(-1));
+  Rect r(0, 0, cols, rows);
+  for(int v1 = 0; v1 < rows; v1++)
+  {
+     for(int u1 = 0; u1 < cols; u1++)
+     {
+         if(selectMask1.at<uchar>(v1, u1))
+         {
+             FixedPointScalar d1 = d1_vec[v1*cols + u1];
+             FixedPointScalar u1_shift ((FIXP_SCALAR_TYPE)u1, fpconfig);
+             FixedPointScalar v1_shift ((FIXP_SCALAR_TYPE)v1, fpconfig);
+             FixedPointScalar transformed_d1_shift = KRK_inv_20*u1_shift + KRK_inv_21*v1_shift + KRK_inv_22;
+             transformed_d1_shift = (d1*transformed_d1_shift) + Kt_2;
+             if(mpz_get_si(transformed_d1_shift.big_value) > 0)
+             {
+                 FixedPointScalar u0_shift = KRK_inv_00*u1_shift + KRK_inv_01*v1_shift + KRK_inv_02;
+                 FixedPointScalar v0_shift = KRK_inv_10*u1_shift + KRK_inv_11*v1_shift + KRK_inv_12;
+                 u0_shift = (d1*u0_shift) + Kt_0;
+                 v0_shift = (d1*v0_shift) + Kt_1;
+                 u0_shift = u0_shift / transformed_d1_shift;
+                 v0_shift = v0_shift / transformed_d1_shift;
+                 //int u0 = (int)round(u0_shift.value_floating);
+                 //int v0 = (int)round(v0_shift.value_floating); 
+                 int u0 = (int)round(u0_shift.to_floating());
+                 int v0 = (int)round(v0_shift.to_floating()); 
+                 //exit(1);
+                 if(r.contains(Point(u0,v0)))
+                 {
+                     FixedPointScalar d0 = d0_vec[v0*cols + u0];
+                     //if(validMask0.at<uchar>(v0, u0) && std::abs(mpz_get_si(transformed_d1_shift.big_value) - mpz_get_si(d0.big_value)) <= (maxDepthDiff*(1LL<<shift)))
+                     if(validMask0.at<uchar>(v0, u0) && std::abs(transformed_d1_shift.to_floating() - d0.to_floating()) <= maxDepthDiff && std::abs(v1 - v0) <= maxLineDiff)
+                     {
+                            Vec2s& c = corresps.at<Vec2s>(v0,u0);
+                            if(c[0] != -1)
+                            {
+                                int exist_u1 = c[0], exist_v1 = c[1];
+                                FixedPointScalar exist_u1_shift ((FIXP_SCALAR_TYPE)exist_u1, fpconfig);
+                                FixedPointScalar exist_v1_shift ((FIXP_SCALAR_TYPE)exist_v1, fpconfig);
+                                FixedPointScalar exist_d1 = d1_vec[exist_v1*cols + exist_u1];
+                                FixedPointScalar exist_d1_shift = KRK_inv_20*exist_u1_shift + KRK_inv_21*exist_v1_shift + KRK_inv_22;
+                                exist_d1_shift = (exist_d1*exist_d1_shift) + Kt_2;
+                                if(mpz_get_si(transformed_d1_shift.big_value) > mpz_get_si(exist_d1_shift.big_value))
+                                    continue;
+                            }
+                            else
+                                correspCount++;
+
+                            c = Vec2s((short)u1, (short)v1);
+
+                     }
+                 }
+             }
+
+         }
+     }
+  }
+
+  int v_max_corr = 0;
+  _corresps.create(correspCount, 1, CV_32SC4);
+  Vec4i * corresps_ptr = _corresps.ptr<Vec4i>();
+  for(int v0 = 0, i = 0; v0 < corresps.rows; v0++)
+  {
+      const Vec2s* corresps_row = corresps.ptr<Vec2s>(v0);
+      for(int u0 = 0; u0 < corresps.cols; u0++)
+      {
+          const Vec2s& c = corresps_row[u0];
+          if(c[0] != -1)
+            {
+              //corresps_ptr[i++] = Vec4i(u0,v0,c[0],c[1]);
+              corresps_ptr[i++] = Vec4i(c[0],c[1],u0,v0);
+              int v_diff = abs(v0-c[1]);
+              if(v_diff > v_max_corr)
+                  v_max_corr = v_diff;
+            }
+      }
+  }
+  return v_max_corr;
+}
 
 typedef
 void (*CalcRgbdEquationCoeffsPtr)(float*, float, float, const Point3f&, float, float);
@@ -560,7 +808,215 @@ void (*CalcFeatureXEquationCoeffsPtr)(float*, const Point3f&, float);
 
 typedef
 void (*CalcFeatureYEquationCoeffsPtr)(float*, const Point3f&, float);
+/*
+static
+void calcRgbdLsmMatrices(const Mat& image0, const vector<FixedPointVector>& cloud0, const Mat& Rt,
+               const Mat& image1, const Mat& dI_dx1, const Mat& dI_dy1,
+               const Mat& corresps, float fx, float fy, float sobelScaleIn,
+               vector<FixedPointScalar>& A_vec, vector<FixedPointScalar>& B_vec, CalcRgbdEquationCoeffsPtr func, int transformDim)
+{
+    FixedPointScalar correspsCount((FIXP_SCALAR_TYPE)corresps.rows, fpconfig);
+    FixedPointScalar fx_fix((FIXP_SCALAR_TYPE)fx, fpconfig);
+    FixedPointScalar fy_fix((FIXP_SCALAR_TYPE)fy, fpconfig);
 
+    vector<FixedPointScalar> Rt_vec;
+    Rt_vec = f_Mat2Vec(Rt, fpconfig); //float
+
+    vector<FixedPointScalar> diffs_ptr;
+    FixedPointScalar sigma((FIXP_SCALAR_TYPE)0, fpconfig);
+
+    const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
+
+    for(int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
+    {
+         const Vec4i& c = corresps_ptr[correspIndex];
+         int u0 = c[0], v0 = c[1];
+         int u1 = c[2], v1 = c[3];
+
+         FixedPointScalar diffs ((FIXP_SCALAR_TYPE)(static_cast<int>(image0.at<uchar>(v0,u0))-static_cast<int>(image1.at<uchar>(v1,u1))), fpconfig);
+         diffs_ptr.push_back(diffs);
+         sigma += diffs * diffs;
+    }
+    FixedPointScalar sigma_final = (sigma/correspsCount).sqrt();
+
+    for(int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
+    {
+         const Vec4i& c = corresps_ptr[correspIndex];
+         int u0 = c[0], v0 = c[1];
+         int u1 = c[2], v1 = c[3];
+
+         //double w = sigma + std::abs(diffs_ptr[correspIndex]);
+         //w = w > DBL_EPSILON ? 1./w : 1.;
+         FixedPointScalar w_tmp = sigma_final + diffs_ptr[correspIndex].abs();
+         FixedPointScalar one_fix((FIXP_SCALAR_TYPE)1, fpconfig);
+         FixedPointScalar w = one_fix;
+         if(mpz_get_si(w_tmp.big_value) == 0)
+         {
+           w = one_fix;
+         }
+         else
+         {
+           w = one_fix / w_tmp;
+         }
+
+         FixedPointScalar sobelScaleIn_fix((FIXP_SCALAR_TYPE)sobelScaleIn, fpconfig);
+         FixedPointScalar w_sobelScale = w * sobelScaleIn_fix;
+         FixedPointVector p0 = cloud0[v0*image0.cols + u0];
+         FixedPointScalar tp0x = p0.x * Rt_vec[0] + p0.y * Rt_vec[1] + p0.z * Rt_vec[2] + Rt_vec[3];
+         FixedPointScalar tp0y = p0.x * Rt_vec[4] + p0.y * Rt_vec[5] + p0.z * Rt_vec[6] + Rt_vec[7];
+         FixedPointScalar tp0z = p0.x * Rt_vec[8] + p0.y * Rt_vec[9] + p0.z * Rt_vec[10] + Rt_vec[11];
+
+         FixedPointScalar neg_one(-1.0f, fpconfig);
+         FixedPointScalar dI_dx1_fix((FIXP_SCALAR_TYPE)dI_dx1.at<short int>(v1,u1), fpconfig);
+         FixedPointScalar dI_dy1_fix((FIXP_SCALAR_TYPE)dI_dy1.at<short int>(v1,u1), fpconfig);
+         FixedPointScalar dIdx = w_sobelScale * dI_dx1_fix;
+         FixedPointScalar dIdy = w_sobelScale * dI_dy1_fix;
+         FixedPointScalar invz = one_fix / tp0z;
+         FixedPointScalar v0_fix = dIdx * fx_fix * invz;
+         FixedPointScalar v1_fix = dIdy * fy_fix * invz;
+         FixedPointScalar v2_fix = v0_fix * tp0x + v1_fix * tp0y;
+         v2_fix = neg_one * v2_fix * invz;
+
+         FixedPointScalar zero_fix((FIXP_SCALAR_TYPE)0, fpconfig);
+         vector<FixedPointScalar> C_vec(6, zero_fix);
+         C_vec[0] = neg_one * tp0z * v1_fix + tp0y * v2_fix;
+         C_vec[1] = tp0z * v0_fix - tp0x * v2_fix;
+         C_vec[2] = neg_one * tp0y * v0_fix + tp0x * v1_fix;
+         C_vec[3] = v0_fix;
+         C_vec[4] = v1_fix;
+         C_vec[5] = v2_fix;
+
+         for(int y = 0; y < transformDim; y++)
+         {
+             for(int x = y; x < transformDim; x++)
+             {
+                 FixedPointScalar  test = C_vec[y] * C_vec[x];
+                 A_vec[y*transformDim + x] = A_vec[y*transformDim + x] + test;
+             }
+             B_vec[y] = B_vec[y] + (C_vec[y] * w * diffs_ptr[correspIndex]);
+         }
+    }
+
+    for(int y = 0; y < transformDim; y++)
+        for(int x = y+1; x < transformDim; x++)
+        {
+            A_vec[x*transformDim + y] = A_vec[y*transformDim + x];
+        }
+}
+
+static
+void calcICPLsmMatrices(const vector<FixedPointVector>& cloud0, const Mat& Rt,
+                        const vector<FixedPointVector>& cloud1, const vector<FixedPointVector>& normals1,
+                        const Mat& corresps,
+                        //Mat& AtA, Mat& AtB, CalcICPEquationCoeffsPtr func, int transformDim)
+                        vector<FixedPointScalar>& A_vec, vector<FixedPointScalar>& B_vec, CalcICPEquationCoeffsPtr func, int transformDim, int cols)
+{
+    
+    FixedPointScalar correspsCount((FIXP_SCALAR_TYPE)corresps.rows, fpconfig);
+
+    const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
+
+    vector<FixedPointScalar> Rt_vec;
+    Rt_vec = f_Mat2Vec(Rt, fpconfig); //float
+
+    vector<FixedPointScalar> diffs_ptr;
+    vector<FixedPointVector> tps0_ptr;
+    FixedPointScalar sigma((FIXP_SCALAR_TYPE)0, fpconfig);
+    for(int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
+    {
+        const Vec4i& c = corresps_ptr[correspIndex];
+        int u0 = c[0], v0 = c[1];
+        int u1 = c[2], v1 = c[3];
+
+        FixedPointVector p0 = cloud0[v0*cols + u0];
+        FixedPointScalar p0x = p0.x;
+        FixedPointScalar p0y = p0.y;
+        FixedPointScalar p0z = p0.z;
+
+
+        FixedPointScalar tp0x = p0x * Rt_vec[0] + p0y * Rt_vec[1] + p0z * Rt_vec[2] + Rt_vec[3];
+        FixedPointScalar tp0y = p0x * Rt_vec[4] + p0y * Rt_vec[5] + p0z * Rt_vec[6] + Rt_vec[7];
+        FixedPointScalar tp0z = p0x * Rt_vec[8] + p0y * Rt_vec[9] + p0z * Rt_vec[10] + Rt_vec[11];
+
+        FixedPointVector n1 = normals1[v1*cols + u1];
+        FixedPointScalar n1x = n1.x;
+        FixedPointScalar n1y = n1.y;
+        FixedPointScalar n1z = n1.z;
+
+        FixedPointVector p1 = cloud1[v1*cols + u1];
+        FixedPointScalar p1x = p1.x;
+        FixedPointScalar p1y = p1.y;
+        FixedPointScalar p1z = p1.z;
+
+        FixedPointVector v (p1x - tp0x, p1y - tp0y, p1z - tp0z);
+
+        FixedPointVector tp0(tp0x, tp0y, tp0z);
+        tps0_ptr.push_back(tp0);
+        FixedPointScalar diffs = n1x * v.x + n1y * v.y + n1z * v.z;
+        diffs_ptr.push_back(diffs);
+        sigma += diffs * diffs;
+    }
+
+    FixedPointScalar sigma_final = (sigma/correspsCount).sqrt();
+
+    for(int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
+    {
+        const Vec4i& c = corresps_ptr[correspIndex];
+        int u1 = c[2], v1 = c[3];
+        
+        FixedPointScalar w_tmp = sigma_final + diffs_ptr[correspIndex].abs();
+        FixedPointScalar one_fix((FIXP_SCALAR_TYPE)1, fpconfig);
+        FixedPointScalar w = one_fix;
+        //if(w_tmp.value == 0)
+        if(mpz_get_si(w_tmp.big_value) == 0)
+        {
+          w = one_fix;
+        }
+        else
+        {
+          w = one_fix / w_tmp;
+        }
+        
+        FixedPointVector n1 = normals1[v1*cols + u1];
+        FixedPointScalar n1x = n1.x;
+        FixedPointScalar n1y = n1.y;
+        FixedPointScalar n1z = n1.z;
+        n1x = n1x * w;
+        n1y = n1y * w;
+        n1z = n1z * w;
+
+        FixedPointVector tp0 = tps0_ptr[correspIndex];
+        FixedPointScalar neg_one(-1.0f, fpconfig);
+        FixedPointScalar zero_fix((FIXP_SCALAR_TYPE)0, fpconfig);
+        vector<FixedPointScalar> C_vec(6, zero_fix);
+        FixedPointScalar c0 = neg_one * tp0.z * n1y + tp0.y * n1z;
+        FixedPointScalar c1 = tp0.z * n1x - tp0.x * n1z;
+        FixedPointScalar c2 = neg_one * tp0.y * n1x + tp0.x * n1y;
+        C_vec[0] = c0;
+        C_vec[1] = c1;
+        C_vec[2] = c2;
+        C_vec[3] = n1x;
+        C_vec[4] = n1y;
+        C_vec[5] = n1z;
+        
+        for(int y = 0; y < transformDim; y++)
+        {
+            for(int x = y; x < transformDim; x++)
+            {
+                FixedPointScalar  test = C_vec[y] * C_vec[x];
+                A_vec[y*transformDim + x] = A_vec[y*transformDim + x] + test;
+            }
+            B_vec[y] = B_vec[y] + (C_vec[y] * w * diffs_ptr[correspIndex]);
+        }
+    }
+
+    for(int y = 0; y < transformDim; y++)
+        for(int x = y+1; x < transformDim; x++)
+        {
+            A_vec[x*transformDim + y] = A_vec[y*transformDim + x];
+        }
+}
+*/
 
 static
 void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
@@ -798,7 +1254,98 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
 }
 
 static
-bool solveSystem(const Mat& AtA, const Mat& AtB, float detThreshold, Mat& x)
+bool solveSystem(vector<FixedPointScalar>& A_vec, vector<FixedPointScalar>& B_vec, double detThreshold, Mat& x)
+{
+    FixedPointScalar zero_fix((FIXP_SCALAR_TYPE)0, fpconfig);
+    vector<FixedPointScalar> A_vec2(6*6, zero_fix);
+    vector<FixedPointScalar> B_vec2(6, zero_fix);
+
+    int rows = 6;
+    int cols = 6;
+    if(mpz_get_si(A_vec[0].big_value)==0)
+    {
+        cout << "===========DIV 0===================== " << endl;
+        return false;
+    }
+    A_vec2[0] = A_vec[0];
+    A_vec2[1] = A_vec[1];
+    A_vec2[2] = A_vec[2];
+    A_vec2[3] = A_vec[3];
+    A_vec2[4] = A_vec[4];
+    A_vec2[5] = A_vec[5];
+    A_vec2[6] = A_vec[1]/A_vec[0];
+    A_vec2[12] = A_vec[2]/A_vec[0];
+    A_vec2[18] = A_vec[3]/A_vec[0];
+    A_vec2[24] = A_vec[4]/A_vec[0];
+    A_vec2[30] = A_vec[5]/A_vec[0];
+    for(int k = 0; k < rows; k++)
+    {
+        for(int m = 0; m < k; m++)
+        {   
+            if(m==0)
+            {
+                A_vec2[k*cols + k] = A_vec[k*cols + k] - (A_vec2[m*cols + k] * A_vec2[k*cols + m]);
+ 
+            }
+            else
+                A_vec2[k*cols + k] = A_vec2[k*cols + k] - (A_vec2[m*cols + k] * A_vec2[k*cols + m]);
+        }
+        
+        for(int i = k+1; i < cols; i++)
+        {
+            for(int m = 0; m < k; m++)
+            {
+                if(m==0)
+                    A_vec2[k*cols + i] = A_vec[k*cols + i] - (A_vec2[m*cols + i] * A_vec2[k*cols + m]);
+                else
+                    A_vec2[k*cols + i] = A_vec2[k*cols + i] - (A_vec2[m*cols + i] * A_vec2[k*cols + m]);
+            }
+            //if(A_vec2[k*cols + k].value==0)
+            if(mpz_get_si(A_vec2[k*cols + k].big_value)==0)
+            {
+                cout << "===========DIV 1===================== " << endl;
+                return false;
+            }
+          
+            A_vec2[i*cols + k] = A_vec2[k*cols + i] / A_vec2[k*cols + k] ;
+        }
+
+    }
+
+    B_vec2[0] = B_vec[0];
+    for(int i = 0; i < rows; i++)
+    {
+        for(int k = 0; k < i; k++)
+        {
+            if(k==0)
+                B_vec2[i] = B_vec[i] - (A_vec2[i*cols + k]*B_vec2[k]) ;
+            else
+                B_vec2[i] = B_vec2[i] - (A_vec2[i*cols + k]*B_vec2[k]) ;
+        }
+    }
+
+    for(int i = rows-1; i >= 0; i--)
+    {
+        //if(A_vec2[i*cols + i].value==0)
+        if(mpz_get_si(A_vec2[i*cols + i].big_value)==0)
+            {
+            cout << "===========DIV 2===================== " << endl;
+                return false;
+            }
+        B_vec2[i] = B_vec2[i] / A_vec2[i*cols + i];
+        for(int k = i+1; k < rows; k++)
+        {
+            B_vec2[i] = B_vec2[i] - (A_vec2[k*cols + i]*B_vec2[k]) ;
+        }
+    }
+
+
+    x = Vec2Mat_f(B_vec2, 6, 1);
+    return true;
+}
+
+static
+bool solveSystem_ori(const Mat& AtA, const Mat& AtB, float detThreshold, Mat& x)
 {
     float det = determinant(AtA);
 
@@ -935,8 +1482,10 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
     {
         const Mat& levelCameraMatrix = cameraMatrix;
         const Mat& levelCameraMatrix_inv = levelCameraMatrix.inv(DECOMP_SVD);
-        const Mat& srcLevelDepth = srcFrame->depth;
-        const Mat& dstLevelDepth = dstFrame->depth;
+        //const Mat& srcLevelDepth = srcFrame->depth;
+        //const Mat& dstLevelDepth = dstFrame->depth;
+        const vector<FixedPointScalar>& srcLevelDepth = srcFrame->depth_vec;
+        const vector<FixedPointScalar>& dstLevelDepth = dstFrame->depth_vec;
 
         const float fx = levelCameraMatrix.at<float>(0,0);
         const float fy = levelCameraMatrix.at<float>(1,1);
@@ -951,28 +1500,55 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
         for(int iter = 0; iter < iterCounts_vec[level]; iter ++)
         {
             Mat AtA(transformDim, transformDim, CV_32FC1, Scalar(0)), AtB(transformDim, 1, CV_32FC1, Scalar(0));
+            FixedPointScalar zero_fix((int64_t)0, fpconfig);
+            vector<FixedPointScalar> A_vec(transformDim*transformDim, zero_fix);
+            vector<FixedPointScalar> B_vec(transformDim, zero_fix);
+            vector<FixedPointScalar> A_icp_vec(transformDim*transformDim, zero_fix);
+            vector<FixedPointScalar> B_icp_vec(transformDim, zero_fix);
+            vector<FixedPointScalar> A_rgbd_vec(transformDim*transformDim, zero_fix);
+            vector<FixedPointScalar> B_rgbd_vec(transformDim, zero_fix);
             if(iter>=5){
                 Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
 
-                int v_rgbd = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
-                                             srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskText,
-                                             maxDepthDiff, corresps_rgbd);
+                //int v_rgbd = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
+                //                             srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskText,
+                //                             maxDepthDiff, corresps_rgbd);
+                int v_rgbd = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt,
+                                             dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskText,
+                                             maxDepthDiff, srcFrame->image.rows, srcFrame->image.cols, corresps_rgbd);
+                //int v_rgbd = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
+                //                             srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskText,
+                //                             maxDepthDiff, srcFrame->image.rows, srcFrame->image.cols, corresps_rgbd);
                 if (v_rgbd > v_max)
                     v_max = v_rgbd;
+                //cout << corresps_rgbd << endl;
                 //cout << "v_rgbd" << v_rgbd << endl;
                 //exit(1);
-                int v_icp = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
-                                            srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskNormal,
-                                            maxDepthDiff, corresps_icp);
+                //int v_icp = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
+                //                            srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskNormal,
+                //                            maxDepthDiff, corresps_icp);
+                int v_icp = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt,
+                                            dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskNormal,
+                                            maxDepthDiff, srcFrame->image.rows, srcFrame->image.cols, corresps_icp);
+                //int v_icp = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
+                //                            srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskNormal,
+                //                            maxDepthDiff, srcFrame->image.rows, srcFrame->image.cols, corresps_icp);
+                if (v_icp > v_max)
+                    v_max = v_icp;
                 if(corresps_rgbd.rows >= minCorrespsCount)
                 {
                     calcRgbdLsmMatrices(srcFrame->image, srcFrame->cloud, resultRt,
                                         dstFrame->image, dstFrame->dI_dx, dstFrame->dI_dy,
                                         corresps_rgbd, fx, fy, sobelScale,
                                         AtA_rgbd, AtB_rgbd, rgbdEquationFuncPtr, transformDim);
+                                        //A_rgbd_vec, B_rgbd_vec, rgbdEquationFuncPtr, transformDim);
 
                     AtA += AtA_rgbd;
                     AtB += AtB_rgbd;
+                    //for(int i = 0; i < A_vec.size(); i ++)
+                    //    A_vec[i] += A_rgbd_vec[i]; 
+                    //for(int i = 0; i < B_vec.size(); i ++)
+                    //    B_vec[i] += B_rgbd_vec[i]; 
                 }
 
                 if(corresps_icp.rows >= minCorrespsCount)
@@ -980,9 +1556,24 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                     calcICPLsmMatrices(srcFrame->cloud, resultRt,
                                        dstFrame->cloud, dstFrame->normals,
                                        corresps_icp, AtA_icp, AtB_icp, icpEquationFuncPtr, transformDim);
+                                       //corresps_icp, A_icp_vec, B_icp_vec, icpEquationFuncPtr, transformDim, srcFrame->image.cols);
                     AtA += AtA_icp;
                     AtB += AtB_icp;
+                    //for(int i = 0; i < A_vec.size(); i ++)
+                    //    A_vec[i] += A_icp_vec[i]; 
+                    //for(int i = 0; i < B_vec.size(); i ++)
+                    //    B_vec[i] += B_icp_vec[i]; 
                 }
+                //AtA = Vec2Mat_f(A_vec, 6, 6);
+                //AtB = Vec2Mat_f(B_vec, 6, 1);
+                //Mat ksi_t;
+                //bool solutionExist_t = solveSystem(A_vec, B_vec, determinantThreshold, ksi_t);
+                //bool solutionExist = solveSystem_ori(AtA, AtB, determinantThreshold, ksi);
+                //cout << ksi << endl;
+                //cout << ksi_t << endl;
+                //exit(1);
+                //if(!solutionExist)
+                //    break;
             }
             else 
             {
@@ -1051,6 +1642,15 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                                      AtA_feature, AtB_feature, featureXEquationFuncPtr, featureYEquationFuncPtr, transformDim);
                AtA += AtA_feature;
                AtB += AtB_feature;
+               //vector<FixedPointScalar>  A_feature_vec = f_Mat2Vec(AtA_feature, fpconfig);
+               //vector<FixedPointScalar>  B_feature_vec = f_Mat2Vec(AtB_feature, fpconfig);
+               //for(int i = 0; i < A_vec.size(); i ++)
+               //    A_vec[i] += A_feature_vec[i]; 
+               //for(int i = 0; i < B_vec.size(); i ++)
+               //    B_vec[i] += B_feature_vec[i]; 
+               /////bool solutionExist = solveSystem_ori(AtA, AtB, determinantThreshold, ksi);
+               /////if(!solutionExist)
+               /////    break;
                //cout << "AtA " << AtA << endl;
                //cout << "AtB " << AtB << endl;
                //cout << "cloud " << srcFrame->cloud << endl;
@@ -1059,7 +1659,7 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                //exit(1);
             }
 
-            bool solutionExist = solveSystem(AtA, AtB, determinantThreshold, ksi);
+            bool solutionExist = solveSystem_ori(AtA, AtB, determinantThreshold, ksi);
             if(!solutionExist)
                 break;
 

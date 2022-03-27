@@ -3,6 +3,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/core/utility.hpp>
 
+#include "fixed_point_util.hpp"
+
 using namespace cv;
   /** Object that contains a frame data.
    */
@@ -21,6 +23,9 @@ using namespace cv;
       Mat mask;
       Mat normals;
       Mat cloud;
+      std::vector<FixedPointScalar> depth_vec;
+      std::vector<FixedPointVector> cloud_vec;
+      std::vector<FixedPointVector> normals_vec;
   };
 
   struct  OdometryFrame : public RgbdFrame
@@ -65,12 +70,14 @@ using namespace cv;
     static inline float
     DEFAULT_MAX_DEPTH()
     {
-      return 4.f; // in meters
+      //return 4.f; // in meters
+      return 4.f*5000; // in meters
     }
     static inline float
     DEFAULT_MAX_DEPTH_DIFF()
     {
-      return 0.07f; // in meters
+      //return 0.07f; // in meters
+      return 0.07f*5000; // in meters
     }
     static inline float
     DEFAULT_MAX_POINTS_PART()
@@ -81,7 +88,8 @@ using namespace cv;
     static inline float
     DEFAULT_MAX_TRANSLATION()
     {
-      return 0.15f; // in meters
+      //return 0.15f; // in meters
+      return 0.15f*5000; // in meters
     }
     static inline float
     DEFAULT_MAX_ROTATION()

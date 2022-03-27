@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 project(liyang-odometry)
 
-#set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_BUILD_TYPE "Debug")
 #set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
 
 #c++11
@@ -30,12 +30,16 @@ else()
 endif()
 
 file(GLOB TARGET_SRC
-     #src/*.cpp
-     src/main.cpp
-     src/vo.cpp
+     src/*.cpp
+     #src/main.cpp
+     #src/vo.cpp
 )
 
-include_directories(${OpenCV_INCLUDE_DIRS} include)
+set(GMP_DIRS ~/liyang_lib/include)
+include_directories(${GMP_DIRS} ${OpenCV_INCLUDE_DIRS} include)
+link_directories("~/liyang_lib/lib/" )
 
 add_executable(liyang-odometry ${TARGET_SRC})
 target_link_libraries (liyang-odometry ${OpenCV_LIBS})
+target_link_libraries (liyang-odometry ${OpenCV_LIBS} "~/liyang_lib/lib/libgmp.so.10.4.1" "~/liyang_lib/lib/libgmpxx.so.4.6.1")
+

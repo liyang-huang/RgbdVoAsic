@@ -1,9 +1,13 @@
 #include <opencv2/core.hpp>
 #include <vector>
+//#include <Eigen/Core>
+#include <gmpxx.h>
+#include <gmp.h>
 
 typedef int64_t FIXP_INT_SCALAR_TYPE;
 typedef float FIXP_SCALAR_TYPE;
 
+void testout();
 /**
  * Fixed point data configuration.
  * Include sign, bit_width, shift.
@@ -52,37 +56,44 @@ public:
 /**
  * Fixed point data type template.
  */
-template<typename Floating, typename FixedPoint>
+template<typename Floating>
 class FixedPointType {
 public:
 
 	FixedPointType(
 		Floating value_floating,
-		FixedPoint value,
 		FixedPointConfig config = FixedPointConfig(0, 0, 0)) :
 		value_floating(value_floating),
-		value(value),
-		config(config) {};
+		config(config) {
+                mpz_init(big_value);
+        };
 
 	// Copy constructor
 	FixedPointType(const FixedPointType &object) {
 		value_floating = object.value_floating;
-		value = object.value;
 		config = object.config;
+                mpz_init(big_value);
+	        mpz_set(big_value, object.big_value);
 	};
+
+	// destructor
+	~FixedPointType() {
+               mpz_clear(big_value);
+        };
 
 	bool enable_check_bit_width = true;
 	Floating value_floating;
-	FixedPoint value;
 	FixedPointConfig config;
+        mpz_t big_value;
 };
 
 /**
  * Fixed point Scalar data type.
  */
-class FixedPointScalar: public FixedPointType<FIXP_SCALAR_TYPE, FIXP_INT_SCALAR_TYPE> {
+class FixedPointScalar: public FixedPointType<FIXP_SCALAR_TYPE> {
 public:
 
+	FixedPointScalar();
 	FixedPointScalar(
 		FIXP_SCALAR_TYPE value_floating = 0,
 		FixedPointConfig config = FixedPointConfig(0, 0, 0));
@@ -93,9 +104,7 @@ public:
 	// destructor
 	~FixedPointScalar() {};
 
-	void check_bit_width();
-
-	void set_value(FIXP_INT_SCALAR_TYPE value, FixedPointConfig config);
+	void check_bit_width(int op);
 
 	void set_bit_width(int bit_width);
 
@@ -120,18 +129,27 @@ public:
 	// Overload operator /
 	FixedPointScalar operator / (const FixedPointScalar &object);
 
-	// Overload operator >>
-	FixedPointScalar operator >> (int bit_shift);
-
-	// Overload operator <<
-	FixedPointScalar operator << (int bit_shift);
-
 	FixedPointScalar sqrt();
 
 	FixedPointScalar abs();
 
 	FIXP_SCALAR_TYPE to_floating();
+
+	void print_big_value();
 };
 
+class FixedPointVector {
+public:
+	FixedPointVector(const FixedPointScalar &x, const FixedPointScalar &y, const FixedPointScalar &z);
+        ~FixedPointVector() {};
 
+        FixedPointScalar x;
+        FixedPointScalar y;
+        FixedPointScalar z;
+};
+
+std::vector<FixedPointScalar> f_Mat2Vec(const cv::Mat& in_mat, FixedPointConfig config);
+cv::Mat Vec2Mat_f(const std::vector<FixedPointScalar>& in_vec, int rows, int cols);
+cv::Mat PVec2Mat_f(const std::vector<FixedPointVector>& in_vec, int rows, int cols);
+std::vector<FixedPointVector> f_PMat2Vec(const cv::Mat& in_mat, FixedPointConfig config);
 

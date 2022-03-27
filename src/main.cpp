@@ -180,9 +180,11 @@ int main(int argc, char** argv)
 
             // scale depth
             Mat depth_flt;
-            depth.convertTo(depth_flt, CV_32FC1, 1.f/5000.f);
+            //depth.convertTo(depth_flt, CV_32FC1, 1.f/5000.f);
+            depth.convertTo(depth_flt, CV_32FC1, 1.f);
+            //depth.convertTo(depth_flt, CV_32SC1, 1);
 //#if !BILATERAL_FILTER
-            depth_flt.setTo(std::numeric_limits<float>::quiet_NaN(), depth == 0);
+            //depth_flt.setTo(std::numeric_limits<float>::quiet_NaN(), depth == 0);
             depth = depth_flt;
 //#else
 /*
