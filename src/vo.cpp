@@ -12,16 +12,27 @@ const int maxLineDiff = 70;
 const int sobelSize = 3;
 const double sobelScale = 1./8.;
 
+const bool pyramid_on = false;
+const int feature_iter_num = 2;
+
 static inline
 void setDefaultIterCounts(Mat& iterCounts)
 {
-    iterCounts = Mat(Vec4i(7,7,7,10));
+    if(pyramid_on)
+        //iterCounts = Mat(Vec4i(7,7,7,10));
+        //iterCounts = Mat(Vec4i(7,7,7,7));
+        iterCounts = Mat(Vec4i(7,7,7,7));
+    else
+        iterCounts = Mat(Vec4i(7));
 }
 
 static inline
 void setDefaultMinGradientMagnitudes(Mat& minGradientMagnitudes)
 {
-    minGradientMagnitudes = Mat(Vec4f(10,10,10,10));
+    if(pyramid_on)
+        minGradientMagnitudes = Mat(Vec4f(10,10,10,10));
+    else
+        minGradientMagnitudes = Mat(Vec4f(10));
 }
 
 static
@@ -1170,7 +1181,7 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
         for(int iter = 0; iter < iterCounts_vec[level]; iter ++)
         {
             Mat AtA(transformDim, transformDim, CV_64FC1, Scalar(0)), AtB(transformDim, 1, CV_64FC1, Scalar(0));
-            if(iter>=0){
+            if(iter>=feature_iter_num){
                 Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
 
                 int v_rgbd = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
