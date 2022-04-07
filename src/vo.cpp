@@ -429,12 +429,12 @@ Size Odometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
 
     depthTo3d(frame->depth, cameraMatrix, frame->cloud);
 
-    if(cacheType & OdometryFrame::CACHE_DST)
-    {
-        if(frame->normals.empty())
-        {
-            normalsComputer(frame->cloud, frame->depth.rows, frame->depth.cols, frame->normals);
-        }
+    //if(cacheType & OdometryFrame::CACHE_DST)
+    //{
+    //   if(frame->normals.empty())
+    //   {
+        normalsComputer(frame->cloud, frame->depth.rows, frame->depth.cols, frame->normals);
+    //    }
         checkNormals(frame->normals, frame->depth.size());
 
         MaskGen(frame->mask, frame->depth, (float)minDepth, (float)maxDepth,
@@ -448,12 +448,12 @@ Size Odometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
                         maxPointsPart, frame->maskText);
 
         NormalsMaskGen(frame->normals, frame->maskDepth, maxPointsPart, frame->maskNormal);
-    }
-    else
-    {
-        MaskGen(frame->mask, frame->depth, (float)minDepth, (float)maxDepth,
-                frame->normals, frame->maskDepth);
-    }
+    //}
+    //else
+    //{
+    //    MaskGen(frame->mask, frame->depth, (float)minDepth, (float)maxDepth,
+    //            frame->normals, frame->maskDepth);
+    //}
     return frame->image.size();
 }
 
@@ -561,7 +561,8 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
             const Vec2s& c = corresps_row[u0];
             if(c[0] != -1)
             {
-                corresps_ptr[i++] = Vec4i(u0,v0,c[0],c[1]);
+                //corresps_ptr[i++] = Vec4i(u0,v0,c[0],c[1]);
+                corresps_ptr[i++] = Vec4i(c[0],c[1],u0,v0);
                 int v_diff = abs(v0-c[1]);
                 if(v_diff > v_max_corr)
                     v_max_corr = v_diff;
@@ -978,16 +979,18 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
             if(iter>=feature_iter_num){
                 Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
 
-                int v_rgbd = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
-                                srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskText,
-                                maxDepthDiff, corresps_rgbd);
+                int v_rgbd = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, 
+                                             //resultRt_inv, srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskText,
+                                             resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskText,
+                                             maxDepthDiff, corresps_rgbd);
                 if (v_rgbd > v_max)
                     v_max = v_rgbd;
                 //cout << "v_rgbd" << v_rgbd << endl;
                 //exit(1);
-                int v_icp = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
-                                srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskNormal,
-                                maxDepthDiff, corresps_icp);
+                int v_icp = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, 
+                                            //resultRt_inv, srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskNormal,
+                                            resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskNormal,
+                                            maxDepthDiff, corresps_icp);
                 
                 if (v_icp > v_max)
                     v_max = v_icp;

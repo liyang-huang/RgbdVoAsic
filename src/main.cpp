@@ -81,7 +81,7 @@ void writeResults( const string& filename, const vector<string>& timestamps, con
              << rvec.at<double>(0) << " " << rvec.at<double>(1) << " " << rvec.at<double>(2) << " " << cos_alpha2 << endl;
 
     }
-    file << v_max << endl;
+    //file << v_max << endl;
     file.close();
 }
 
