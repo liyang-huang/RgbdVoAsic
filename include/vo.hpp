@@ -46,19 +46,6 @@ using namespace cv;
     void
     releasePyramids();
 
-    std::vector<Mat> pyramidImage;
-    std::vector<Mat> pyramidDepth;
-    std::vector<Mat> pyramidMask;
-
-    std::vector<Mat> pyramidCloud;
-
-    std::vector<Mat> pyramid_dI_dx;
-    std::vector<Mat> pyramid_dI_dy;
-    std::vector<Mat> pyramidTexturedMask;
-
-    std::vector<Mat> pyramidNormals;
-    std::vector<Mat> pyramidNormalsMask;
-
     Mat dI_dx;
     Mat dI_dy;
     Mat maskDepth;
