@@ -8,12 +8,12 @@
 using namespace cv;
 using namespace std;
 //
-const int maxLineDiff = 70;
+const int maxLineDiff = 20;
 const int sobelSize = 3;
 const double sobelScale = 1./8.;
 
 const bool pyramid_on = false;
-const int feature_iter_num = 2;
+const int feature_iter_num = 5;
 
 static inline
 void setDefaultIterCounts(Mat& iterCounts)
@@ -1156,8 +1156,8 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
     Mat currRt, ksi;
 
     bool isOk = false;
-    for(int level = (int)iterCounts_vec.size() - 1; level >= 0; level--)
-    //for(int level = 0; level == 0; level++)
+    //for(int level = (int)iterCounts_vec.size() - 1; level >= 0; level--)
+    for(int level = 0; level == 0; level++)
     {
         const Mat& levelCameraMatrix = pyramidCameraMatrix[level];
         const Mat& levelCameraMatrix_inv = levelCameraMatrix.inv(DECOMP_SVD);
