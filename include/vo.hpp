@@ -20,6 +20,7 @@ using namespace cv;
       Mat depth;
       Mat mask;
       Mat normals;
+      Mat cloud;
   };
 
   struct  OdometryFrame : public RgbdFrame
@@ -57,6 +58,12 @@ using namespace cv;
 
     std::vector<Mat> pyramidNormals;
     std::vector<Mat> pyramidNormalsMask;
+
+    Mat dI_dx;
+    Mat dI_dy;
+    Mat maskDepth;
+    Mat maskText;
+    Mat maskNormal;
   };
 
   class Odometry

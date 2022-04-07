@@ -136,12 +136,12 @@ int main(int argc, char** argv)
         setCameraMatrixFreiburg1(fx, fy, cx, cy);
     if(filename.find("freiburg2") != string::npos)
         setCameraMatrixFreiburg2(fx, fy, cx, cy);
-    Mat cameraMatrix = Mat::eye(3,3,CV_32FC1);
+    Mat cameraMatrix = Mat::eye(3,3,CV_64FC1);
     {
-        cameraMatrix.at<float>(0,0) = fx;
-        cameraMatrix.at<float>(1,1) = fy;
-        cameraMatrix.at<float>(0,2) = cx;
-        cameraMatrix.at<float>(1,2) = cy;
+        cameraMatrix.at<double>(0,0) = fx;
+        cameraMatrix.at<double>(1,1) = fy;
+        cameraMatrix.at<double>(0,2) = cx;
+        cameraMatrix.at<double>(1,2) = cy;
     }
 
     Ptr<OdometryFrame> frame_prev = Ptr<OdometryFrame>(new OdometryFrame()),
