@@ -86,15 +86,15 @@ void writeResults( const string& filename, const vector<string>& timestamps, con
 }
 
 static
-void setCameraMatrixFreiburg1(float& fx, float& fy, float& cx, float& cy)
+void setCameraMatrixFreiburg1(double& fx, double& fy, double& cx, double& cy)
 {
-    fx = 517.3f; fy = 516.5f; cx = 318.6f; cy = 255.3f;
+    fx = 517.3; fy = 516.5; cx = 318.6; cy = 255.3;
 }
 
 static
-void setCameraMatrixFreiburg2(float& fx, float& fy, float& cx, float& cy)
+void setCameraMatrixFreiburg2(double& fx, double& fy, double& cx, double& cy)
 {
-    fx = 520.9f; fy = 521.0f; cx = 325.1f; cy = 249.7f;
+    fx = 520.9; fy = 521.0; cx = 325.1; cy = 249.7;
 }
 
 /*
@@ -128,13 +128,13 @@ int main(int argc, char** argv)
     const int rgbPathLehgth = 17+8;
     const int depthPathLehgth = 17+10;
 
-    float fx = 525.0f, // default
-          fy = 525.0f,
-          cx = 319.5f,
-          cy = 239.5f;
-    if(filename.find("freiburg1") != string::npos)
+    double fx = 525.0, // default
+           fy = 525.0,
+           cx = 319.5,
+           cy = 239.5;
+    if(filename.find("fr1") != string::npos)
         setCameraMatrixFreiburg1(fx, fy, cx, cy);
-    if(filename.find("freiburg2") != string::npos)
+    if(filename.find("fr2") != string::npos)
         setCameraMatrixFreiburg2(fx, fy, cx, cy);
     Mat cameraMatrix = Mat::eye(3,3,CV_64FC1);
     {
@@ -181,9 +181,9 @@ int main(int argc, char** argv)
             // scale depth
             Mat depth_flt;
             //depth.convertTo(depth_flt, CV_32FC1, 1.f/5000.f);
-            depth.convertTo(depth_flt, CV_32FC1, 1.f);
+            depth.convertTo(depth_flt, CV_64FC1, 1.f);
 #if !BILATERAL_FILTER
-            depth_flt.setTo(std::numeric_limits<float>::quiet_NaN(), depth == 0);
+            //depth_flt.setTo(std::numeric_limits<float>::quiet_NaN(), depth == 0);
             depth = depth_flt;
 #else
             tm_bilateral_filter.start();

@@ -43,13 +43,13 @@ void normalsComputer(const Mat& points3d, int rows, int cols, Mat & normals)
   {
     for (int x = 0; x < cols - 1; ++x)
     {
-    	Vec3f du = points3d.at<Vec3f>(y,x+1) - points3d.at<Vec3f>(y,x);
-    	Vec3f dv = points3d.at<Vec3f>(y+1,x) - points3d.at<Vec3f>(y,x);
-        normals.at<Vec3f>(y,x) = du.cross(dv);
-    	float norm = sqrt(normals.at<Vec3f>(y,x)[0]*normals.at<Vec3f>(y,x)[0] + normals.at<Vec3f>(y,x)[1]*normals.at<Vec3f>(y,x)[1] +normals.at<Vec3f>(y,x)[2]*normals.at<Vec3f>(y,x)[2]);
-            normals.at<Vec3f>(y,x)[0] = normals.at<Vec3f>(y,x)[0] / norm;
-            normals.at<Vec3f>(y,x)[1] = normals.at<Vec3f>(y,x)[1] / norm;
-            normals.at<Vec3f>(y,x)[2] = normals.at<Vec3f>(y,x)[2] / norm;
+    	Vec3d du = points3d.at<Vec3d>(y,x+1) - points3d.at<Vec3d>(y,x);
+    	Vec3d dv = points3d.at<Vec3d>(y+1,x) - points3d.at<Vec3d>(y,x);
+        normals.at<Vec3d>(y,x) = du.cross(dv);
+    	double norm = sqrt(normals.at<Vec3d>(y,x)[0]*normals.at<Vec3d>(y,x)[0] + normals.at<Vec3d>(y,x)[1]*normals.at<Vec3d>(y,x)[1] +normals.at<Vec3d>(y,x)[2]*normals.at<Vec3d>(y,x)[2]);
+            normals.at<Vec3d>(y,x)[0] = normals.at<Vec3d>(y,x)[0] / norm;
+            normals.at<Vec3d>(y,x)[1] = normals.at<Vec3d>(y,x)[1] / norm;
+            normals.at<Vec3d>(y,x)[2] = normals.at<Vec3d>(y,x)[2] / norm;
     }
   }
 }
@@ -72,6 +72,8 @@ void RgbdFrame::release()
     mask.release();
     normals.release();
     cloud.release();
+    normals_ori.release();
+    cloud_ori.release();
 }
 
 OdometryFrame::OdometryFrame() : RgbdFrame()
@@ -111,10 +113,10 @@ Odometry::Odometry() :
 }
 
 Odometry::Odometry(const Mat& _cameraMatrix,
-                   float _minDepth, float _maxDepth, float _maxDepthDiff,
+                   double _minDepth, double _maxDepth, double _maxDepthDiff,
                    const std::vector<int>& _iterCounts,
-                   const std::vector<float>& _minGradientMagnitudes,
-                   float _maxPointsPart) :
+                   const std::vector<double>& _minGradientMagnitudes,
+                   double _maxPointsPart) :
                    minDepth(_minDepth), maxDepth(_maxDepth), maxDepthDiff(_maxDepthDiff),
                    iterCounts(Mat(_iterCounts).clone()),
                    minGradientMagnitudes(Mat(_minGradientMagnitudes).clone()),
@@ -129,51 +131,6 @@ Odometry::Odometry(const Mat& _cameraMatrix,
     }
 }
 
-inline void
-rescaleDepth(InputArray in_in, int depth, OutputArray out_out)
-{
-  cv::Mat in = in_in.getMat();
-  CV_Assert(in.type() == CV_64FC1 || in.type() == CV_32FC1 || in.type() == CV_16UC1 || in.type() == CV_16SC1);
-  CV_Assert(depth == CV_64FC1 || depth == CV_32FC1);
-
-  int in_depth = in.depth();
-
-  out_out.create(in.size(), depth);
-  cv::Mat out = out_out.getMat();
-  if (in_depth == CV_16U)
-  {
-    in.convertTo(out, depth, 1 / 1000.0); //convert to float so that it is in meters
-    cv::Mat valid_mask = in == std::numeric_limits<ushort>::min(); // Should we do std::numeric_limits<ushort>::max() too ?
-    out.setTo(std::numeric_limits<float>::quiet_NaN(), valid_mask); //set a$
-  }
-  if (in_depth == CV_16S)
-  {
-    in.convertTo(out, depth, 1 / 1000.0); //convert to float so tha$
-    cv::Mat valid_mask = (in == std::numeric_limits<short>::min()) | (in == std::numeric_limits<short>::max()); // Should we do std::numeric_limits<ushort>::max() too ?
-    out.setTo(std::numeric_limits<float>::quiet_NaN(), valid_mask); //set a$
-  }
-  if ((in_depth == CV_32F) || (in_depth == CV_64F))
-    in.convertTo(out, depth);
-}
-
-template<typename T>
-void
-rescaleDepthTemplated(const Mat& in, Mat& out);
-
-template<>
-inline void
-rescaleDepthTemplated<float>(const Mat& in, Mat& out)
-{
-  rescaleDepth(in, CV_32F, out);
-}
-
-template<>
-inline void
-rescaleDepthTemplated<double>(const Mat& in, Mat& out)
-{
-  rescaleDepth(in, CV_64F, out);
-}
-
 template<typename T>
 void
 depthTo3dNoMask(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& points3d)
@@ -185,10 +142,7 @@ depthTo3dNoMask(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& points3d
 
   // Build z
   cv::Mat_<T> z_mat;
-  if (z_mat.depth() == in_depth.depth())
-    z_mat = in_depth;
-  else
-    rescaleDepthTemplated<T>(in_depth, z_mat);
+  z_mat = in_depth;
 
   //cout << "liyang test" << in_depth << endl;
   //exit(1);
@@ -225,34 +179,21 @@ depthTo3d(InputArray depth_in, InputArray K_in, OutputArray points3d_out)
 {
   cv::Mat depth = depth_in.getMat();
   cv::Mat K = K_in.getMat();
-  CV_Assert(K.cols == 3 && K.rows == 3 && (K.depth() == CV_64F || K.depth()==CV_32F));
-  CV_Assert(
-      depth.type() == CV_64FC1 || depth.type() == CV_32FC1 || depth.type() == CV_16UC1 || depth.type() == CV_16SC1);
-
-  // TODO figure out what to do when types are different: convert or reject ?
-  cv::Mat K_new;
-  if ((depth.depth() == CV_32F || depth.depth() == CV_64F) && depth.depth() != K.depth())
-  {
-    K.convertTo(K_new, depth.depth());
-  }
-  else
-    K_new = K;
+  CV_Assert(K.cols == 3 && K.rows == 3 && K.depth() == CV_64F);
+  CV_Assert(depth.type() == CV_64FC1);
 
   // Create 3D points in one go.
-  points3d_out.create(depth.size(), CV_MAKETYPE(K_new.depth(), 3));
+  points3d_out.create(depth.size(), CV_MAKETYPE(K.depth(), 3));
   cv::Mat points3d = points3d_out.getMat();
-  if (K_new.depth() == CV_64F)
-    depthTo3dNoMask<double>(depth, K_new, points3d);
-  else
-    depthTo3dNoMask<float>(depth, K_new, points3d);
+  depthTo3dNoMask<double>(depth, K, points3d);
 }
 
 static
-void MaskGen(const Mat& mask, const Mat& Depth, float minDepth, float maxDepth,
+void MaskGen(const Mat& mask, const Mat& Depth, double minDepth, double maxDepth,
                         const Mat& Normal,
                         Mat& maskDepth)
 {
-    minDepth = std::max(0.f, minDepth);
+    minDepth = std::max(0.0, minDepth);
 
     if(!maskDepth.empty())
     {
@@ -268,7 +209,7 @@ void MaskGen(const Mat& mask, const Mat& Depth, float minDepth, float maxDepth,
             maskDepth = mask.clone();
 
         Mat levelDepth = Depth.clone();
-        patchNaNs(levelDepth, 0);
+        //patchNaNs(levelDepth, 0);
 
         maskDepth &= (levelDepth > minDepth) & (levelDepth < maxDepth);
 
@@ -288,7 +229,7 @@ void MaskGen(const Mat& mask, const Mat& Depth, float minDepth, float maxDepth,
 }
 
 static
-void randomSubsetOfMask(Mat& mask, float part)
+void randomSubsetOfMask(Mat& mask, double part)
 {
     const int minPointsCount = 1000; // minimum point count (we can process them fast)
     const int nonzeros = countNonZero(mask);
@@ -316,7 +257,7 @@ void randomSubsetOfMask(Mat& mask, float part)
 
 static
 void TexturedMaskGen(const Mat& dI_dx, const Mat& dI_dy,
-                     const float& minGradientMagnitudes, const Mat& Mask, float maxPointsPart,
+                     const double& minGradientMagnitudes, const Mat& Mask, double maxPointsPart,
                      Mat& texturedMask)
 {
     if(!texturedMask.empty())
@@ -326,8 +267,8 @@ void TexturedMaskGen(const Mat& dI_dx, const Mat& dI_dy,
     }
     else
     {
-        const float sobelScale2_inv = 1.f / (float)(sobelScale * sobelScale);
-        const float minScaledGradMagnitude2 = minGradientMagnitudes * minGradientMagnitudes * sobelScale2_inv;
+        const double sobelScale2_inv = 1.0 / (double)(sobelScale * sobelScale);
+        const double minScaledGradMagnitude2 = minGradientMagnitudes * minGradientMagnitudes * sobelScale2_inv;
         Mat texturedMask_pre(dI_dx.size(), CV_8UC1, Scalar(0));
         for(int y = 0; y < dI_dx.rows; y++)
         {
@@ -336,18 +277,18 @@ void TexturedMaskGen(const Mat& dI_dx, const Mat& dI_dy,
             uchar *texturedMask_row = texturedMask_pre.ptr<uchar>(y);
             for(int x = 0; x < dI_dx.cols; x++)
             {
-                float magnitude2 = static_cast<float>(dIdx_row[x] * dIdx_row[x] + dIdy_row[x] * dIdy_row[x]);
+                double magnitude2 = static_cast<double>(dIdx_row[x] * dIdx_row[x] + dIdy_row[x] * dIdy_row[x]);
                 if(magnitude2 >= minScaledGradMagnitude2)
                     texturedMask_row[x] = 255;
             }
         }
         texturedMask = texturedMask_pre & Mask;
 
-        randomSubsetOfMask(texturedMask, (float)maxPointsPart);
+        randomSubsetOfMask(texturedMask, (double)maxPointsPart);
     }
 }
 
-void NormalsMaskGen(const Mat& normals, const Mat& Mask, float maxPointsPart,
+void NormalsMaskGen(const Mat& normals, const Mat& Mask, double maxPointsPart,
                     Mat& maskNormal)
 {
     if(!maskNormal.empty())
@@ -360,11 +301,11 @@ void NormalsMaskGen(const Mat& normals, const Mat& Mask, float maxPointsPart,
         maskNormal = Mask.clone();
         for(int y = 0; y < maskNormal.rows; y++)
         {
-            const Vec3f *normals_row = normals.ptr<Vec3f>(y);
+            const Vec3d *normals_row = normals.ptr<Vec3d>(y);
             uchar *normalsMask_row = maskNormal.ptr<uchar>(y);
             for(int x = 0; x < maskNormal.cols; x++)
             {
-                Vec3f n = normals_row[x];
+                Vec3d n = normals_row[x];
                 if(cvIsNaN(n[0]))
                 {
                     CV_DbgAssert(cvIsNaN(n[1]) && cvIsNaN(n[2]));
@@ -372,7 +313,7 @@ void NormalsMaskGen(const Mat& normals, const Mat& Mask, float maxPointsPart,
                 }
             }
         }
-        randomSubsetOfMask(maskNormal, (float)maxPointsPart);
+        randomSubsetOfMask(maskNormal, (double)maxPointsPart);
     }
 }
 
@@ -392,8 +333,8 @@ void checkDepth(const Mat& depth, const Size& imageSize)
         CV_Error(Error::StsBadSize, "Depth is empty.");
     if(depth.size() != imageSize)
         CV_Error(Error::StsBadSize, "Depth has to have the size equal to the image size.");
-    if(depth.type() != CV_32FC1)
-        CV_Error(Error::StsBadSize, "Depth type has to be CV_32FC1.");
+    if(depth.type() != CV_64FC1)
+        CV_Error(Error::StsBadSize, "Depth type has to be CV_64FC1.");
 }
 
 static inline
@@ -413,8 +354,8 @@ void checkNormals(const Mat& normals, const Size& depthSize)
 {
     if(normals.size() != depthSize)
         CV_Error(Error::StsBadSize, "Normals has to have the size equal to the depth size.");
-    if(normals.type() != CV_32FC3)
-        CV_Error(Error::StsBadSize, "Normals type has to be CV_32FC3.");
+    if(normals.type() != CV_64FC3)
+        CV_Error(Error::StsBadSize, "Normals type has to be CV_64FC3.");
 }
 
 
@@ -429,38 +370,27 @@ Size Odometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
 
     depthTo3d(frame->depth, cameraMatrix, frame->cloud);
 
-    //if(cacheType & OdometryFrame::CACHE_DST)
-    //{
-    //   if(frame->normals.empty())
-    //   {
-        normalsComputer(frame->cloud, frame->depth.rows, frame->depth.cols, frame->normals);
-    //    }
-        checkNormals(frame->normals, frame->depth.size());
+    normalsComputer(frame->cloud, frame->depth.rows, frame->depth.cols, frame->normals);
+    checkNormals(frame->normals, frame->depth.size());
 
-        MaskGen(frame->mask, frame->depth, (float)minDepth, (float)maxDepth,
-                frame->normals, frame->maskDepth);
+    MaskGen(frame->mask, frame->depth, minDepth, maxDepth,
+            frame->normals, frame->maskDepth);
 
-        Sobel(frame->image, frame->dI_dx, CV_16S, 1, 0, sobelSize);
-        Sobel(frame->image, frame->dI_dy, CV_16S, 0, 1, sobelSize);
-        std::vector<int> minGradientMagnitudes_vec = minGradientMagnitudes;
-        TexturedMaskGen(frame->dI_dx, frame->dI_dy,
-                        minGradientMagnitudes_vec[0], frame->maskDepth,
-                        maxPointsPart, frame->maskText);
+    Sobel(frame->image, frame->dI_dx, CV_16S, 1, 0, sobelSize);
+    Sobel(frame->image, frame->dI_dy, CV_16S, 0, 1, sobelSize);
+    std::vector<int> minGradientMagnitudes_vec = minGradientMagnitudes;
+    TexturedMaskGen(frame->dI_dx, frame->dI_dy,
+                    minGradientMagnitudes_vec[0], frame->maskDepth,
+                    maxPointsPart, frame->maskText);
 
-        NormalsMaskGen(frame->normals, frame->maskDepth, maxPointsPart, frame->maskNormal);
-    //}
-    //else
-    //{
-    //    MaskGen(frame->mask, frame->depth, (float)minDepth, (float)maxDepth,
-    //            frame->normals, frame->maskDepth);
-    //}
+    NormalsMaskGen(frame->normals, frame->maskDepth, maxPointsPart, frame->maskNormal);
     return frame->image.size();
 }
 
 static
 int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
                      const Mat& depth0, const Mat& validMask0,
-                     const Mat& depth1, const Mat& selectMask1, float maxDepthDiff,
+                     const Mat& depth1, const Mat& selectMask1, double maxDepthDiff,
                      Mat& _corresps)
 {
     CV_Assert(K.type() == CV_64FC1);
@@ -474,13 +404,13 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
     Kt = K * Kt;
     const double * Kt_ptr = Kt.ptr<const double>();
 
-    AutoBuffer<float> buf(3 * (depth1.cols + depth1.rows));
-    float *KRK_inv0_u1 = buf;
-    float *KRK_inv1_v1_plus_KRK_inv2 = KRK_inv0_u1 + depth1.cols;
-    float *KRK_inv3_u1 = KRK_inv1_v1_plus_KRK_inv2 + depth1.rows;
-    float *KRK_inv4_v1_plus_KRK_inv5 = KRK_inv3_u1 + depth1.cols;
-    float *KRK_inv6_u1 = KRK_inv4_v1_plus_KRK_inv5 + depth1.rows;
-    float *KRK_inv7_v1_plus_KRK_inv8 = KRK_inv6_u1 + depth1.cols;
+    AutoBuffer<double> buf(3 * (depth1.cols + depth1.rows));
+    double *KRK_inv0_u1 = buf;
+    double *KRK_inv1_v1_plus_KRK_inv2 = KRK_inv0_u1 + depth1.cols;
+    double *KRK_inv3_u1 = KRK_inv1_v1_plus_KRK_inv2 + depth1.rows;
+    double *KRK_inv4_v1_plus_KRK_inv5 = KRK_inv3_u1 + depth1.cols;
+    double *KRK_inv6_u1 = KRK_inv4_v1_plus_KRK_inv5 + depth1.rows;
+    double *KRK_inv7_v1_plus_KRK_inv8 = KRK_inv6_u1 + depth1.cols;
     {
         Mat R = Rt(Rect(0,0,3,3)).clone();
 
@@ -488,35 +418,35 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
         const double * KRK_inv_ptr = KRK_inv.ptr<const double>();
         for(int u1 = 0; u1 < depth1.cols; u1++)
         {
-            KRK_inv0_u1[u1] = (float)(KRK_inv_ptr[0] * u1);
-            KRK_inv3_u1[u1] = (float)(KRK_inv_ptr[3] * u1);
-            KRK_inv6_u1[u1] = (float)(KRK_inv_ptr[6] * u1);
+            KRK_inv0_u1[u1] = (double)(KRK_inv_ptr[0] * u1);
+            KRK_inv3_u1[u1] = (double)(KRK_inv_ptr[3] * u1);
+            KRK_inv6_u1[u1] = (double)(KRK_inv_ptr[6] * u1);
         }
 
         for(int v1 = 0; v1 < depth1.rows; v1++)
         {
-            KRK_inv1_v1_plus_KRK_inv2[v1] = (float)(KRK_inv_ptr[1] * v1 + KRK_inv_ptr[2]);
-            KRK_inv4_v1_plus_KRK_inv5[v1] = (float)(KRK_inv_ptr[4] * v1 + KRK_inv_ptr[5]);
-            KRK_inv7_v1_plus_KRK_inv8[v1] = (float)(KRK_inv_ptr[7] * v1 + KRK_inv_ptr[8]);
+            KRK_inv1_v1_plus_KRK_inv2[v1] = (double)(KRK_inv_ptr[1] * v1 + KRK_inv_ptr[2]);
+            KRK_inv4_v1_plus_KRK_inv5[v1] = (double)(KRK_inv_ptr[4] * v1 + KRK_inv_ptr[5]);
+            KRK_inv7_v1_plus_KRK_inv8[v1] = (double)(KRK_inv_ptr[7] * v1 + KRK_inv_ptr[8]);
         }
     }
 
     int correspCount = 0;
     for(int v1 = 0; v1 < depth1.rows; v1++)
     {
-        const float *depth1_row = depth1.ptr<float>(v1);
+        const double *depth1_row = depth1.ptr<double>(v1);
         const uchar *mask1_row = selectMask1.ptr<uchar>(v1);
         for(int u1 = 0; u1 < depth1.cols; u1++)
         {
-            float d1 = depth1_row[u1];
+            double d1 = depth1_row[u1];
             if(mask1_row[u1])
             {
                 CV_DbgAssert(!cvIsNaN(d1));
-                float transformed_d1 = static_cast<float>(d1 * (KRK_inv6_u1[u1] + KRK_inv7_v1_plus_KRK_inv8[v1]) +
+                double transformed_d1 = static_cast<double>(d1 * (KRK_inv6_u1[u1] + KRK_inv7_v1_plus_KRK_inv8[v1]) +
                                                           Kt_ptr[2]);
                 if(transformed_d1 > 0)
                 {
-                    float transformed_d1_inv = 1.f / transformed_d1;
+                    double transformed_d1_inv = 1.0 / transformed_d1;
                     int u0 = cvRound(transformed_d1_inv * (d1 * (KRK_inv0_u1[u1] + KRK_inv1_v1_plus_KRK_inv2[v1]) +
                                                            Kt_ptr[0]));
                     int v0 = cvRound(transformed_d1_inv * (d1 * (KRK_inv3_u1[u1] + KRK_inv4_v1_plus_KRK_inv5[v1]) +
@@ -524,7 +454,7 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
 
                     if(r.contains(Point(u0,v0)))
                     {
-                        float d0 = depth0.at<float>(v0,u0);
+                        double d0 = depth0.at<double>(v0,u0);
                         if(validMask0.at<uchar>(v0, u0) && std::abs(transformed_d1 - d0) <= maxDepthDiff && std::abs(v1 - v0) <= maxLineDiff)
                         {
                             CV_DbgAssert(!cvIsNaN(d0));
@@ -533,7 +463,7 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
                             {
                                 int exist_u1 = c[0], exist_v1 = c[1];
 
-                                float exist_d1 = (float)(depth1.at<float>(exist_v1,exist_u1) *
+                                double exist_d1 = (double)(depth1.at<double>(exist_v1,exist_u1) *
                                     (KRK_inv6_u1[exist_u1] + KRK_inv7_v1_plus_KRK_inv8[exist_v1]) + Kt_ptr[2]);
 
                                 if(transformed_d1 > exist_d1)
@@ -573,23 +503,22 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
 }
 
 typedef
-void (*CalcRgbdEquationCoeffsPtr)(double*, double, double, const Point3f&, double, double);
+void (*CalcRgbdEquationCoeffsPtr)(double*, double, double, const Point3d&, double, double);
 
 typedef
-void (*CalcICPEquationCoeffsPtr)(double*, const Point3f&, const Vec3f&);
+void (*CalcICPEquationCoeffsPtr)(double*, const Point3d&, const Vec3d&);
 
 typedef
-void (*CalcFeatureXEquationCoeffsPtr)(double*, const Point3f&, double);
+void (*CalcFeatureXEquationCoeffsPtr)(double*, const Point3d&, double);
 
 typedef
-void (*CalcFeatureYEquationCoeffsPtr)(double*, const Point3f&, double);
+void (*CalcFeatureYEquationCoeffsPtr)(double*, const Point3d&, double);
 
 
 static
 void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
                const Mat& image1, const Mat& dI_dx1, const Mat& dI_dy1,
-               //const Mat& corresps, double fx, double fy, double sobelScaleIn,
-               const Mat& corresps, float fx, float fy, double sobelScaleIn,
+               const Mat& corresps, double fx, double fy, double sobelScaleIn,
                Mat& AtA, Mat& AtB, CalcRgbdEquationCoeffsPtr func, int transformDim)
 {
     AtA = Mat(transformDim, transformDim, CV_64FC1, Scalar(0));
@@ -601,8 +530,8 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
     CV_Assert(Rt.type() == CV_64FC1);
     const double * Rt_ptr = Rt.ptr<const double>();
 
-    AutoBuffer<float> diffs(correspsCount);
-    float* diffs_ptr = diffs;
+    AutoBuffer<double> diffs(correspsCount);
+    double* diffs_ptr = diffs;
 
     const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
 
@@ -613,7 +542,7 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
          int u0 = c[0], v0 = c[1];
          int u1 = c[2], v1 = c[3];
 
-         diffs_ptr[correspIndex] = static_cast<float>(static_cast<int>(image0.at<uchar>(v0,u0)) -
+         diffs_ptr[correspIndex] = static_cast<double>(static_cast<int>(image0.at<uchar>(v0,u0)) -
                                                       static_cast<int>(image1.at<uchar>(v1,u1)));
          //std::cout << "====================test=======================" << diffs_ptr[0] <<  std::endl;
          //std::cout << static_cast<int>(image0.at<uchar>(v0,u0)) <<  std::endl;
@@ -637,11 +566,11 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
 
          double w_sobelScale = w * sobelScaleIn;
 
-         const Point3f& p0 = cloud0.at<Point3f>(v0,u0);
-         Point3f tp0;
-         tp0.x = (float)(p0.x * Rt_ptr[0] + p0.y * Rt_ptr[1] + p0.z * Rt_ptr[2] + Rt_ptr[3]);
-         tp0.y = (float)(p0.x * Rt_ptr[4] + p0.y * Rt_ptr[5] + p0.z * Rt_ptr[6] + Rt_ptr[7]);
-         tp0.z = (float)(p0.x * Rt_ptr[8] + p0.y * Rt_ptr[9] + p0.z * Rt_ptr[10] + Rt_ptr[11]);
+         const Point3d& p0 = cloud0.at<Point3d>(v0,u0);
+         Point3d tp0;
+         tp0.x = (double)(p0.x * Rt_ptr[0] + p0.y * Rt_ptr[1] + p0.z * Rt_ptr[2] + Rt_ptr[3]);
+         tp0.y = (double)(p0.x * Rt_ptr[4] + p0.y * Rt_ptr[5] + p0.z * Rt_ptr[6] + Rt_ptr[7]);
+         tp0.z = (double)(p0.x * Rt_ptr[8] + p0.y * Rt_ptr[9] + p0.z * Rt_ptr[10] + Rt_ptr[11]);
 
          func(A_ptr,
               w_sobelScale * dI_dx1.at<short int>(v1,u1),
@@ -678,11 +607,11 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
     CV_Assert(Rt.type() == CV_64FC1);
     const double * Rt_ptr = Rt.ptr<const double>();
 
-    AutoBuffer<float> diffs(correspsCount);
-    float * diffs_ptr = diffs;
+    AutoBuffer<double> diffs(correspsCount);
+    double * diffs_ptr = diffs;
 
-    AutoBuffer<Point3f> transformedPoints0(correspsCount);
-    Point3f * tps0_ptr = transformedPoints0;
+    AutoBuffer<Point3d> transformedPoints0(correspsCount);
+    Point3d * tps0_ptr = transformedPoints0;
 
     const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
 
@@ -693,14 +622,14 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
         int u0 = c[0], v0 = c[1];
         int u1 = c[2], v1 = c[3];
 
-        const Point3f& p0 = cloud0.at<Point3f>(v0,u0);
-        Point3f tp0;
-        tp0.x = (float)(p0.x * Rt_ptr[0] + p0.y * Rt_ptr[1] + p0.z * Rt_ptr[2] + Rt_ptr[3]);
-        tp0.y = (float)(p0.x * Rt_ptr[4] + p0.y * Rt_ptr[5] + p0.z * Rt_ptr[6] + Rt_ptr[7]);
-        tp0.z = (float)(p0.x * Rt_ptr[8] + p0.y * Rt_ptr[9] + p0.z * Rt_ptr[10] + Rt_ptr[11]);
+        const Point3d& p0 = cloud0.at<Point3d>(v0,u0);
+        Point3d tp0;
+        tp0.x = (double)(p0.x * Rt_ptr[0] + p0.y * Rt_ptr[1] + p0.z * Rt_ptr[2] + Rt_ptr[3]);
+        tp0.y = (double)(p0.x * Rt_ptr[4] + p0.y * Rt_ptr[5] + p0.z * Rt_ptr[6] + Rt_ptr[7]);
+        tp0.z = (double)(p0.x * Rt_ptr[8] + p0.y * Rt_ptr[9] + p0.z * Rt_ptr[10] + Rt_ptr[11]);
 
-        Vec3f n1 = normals1.at<Vec3f>(v1, u1);
-        Point3f v = cloud1.at<Point3f>(v1,u1) - tp0;
+        Vec3d n1 = normals1.at<Vec3d>(v1, u1);
+        Point3d v = cloud1.at<Point3d>(v1,u1) - tp0;
 
         tps0_ptr[correspIndex] = tp0;
         diffs_ptr[correspIndex] = n1[0] * v.x + n1[1] * v.y + n1[2] * v.z;
@@ -721,7 +650,7 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
         double w = sigma + std::abs(diffs_ptr[correspIndex]);
         w = w > DBL_EPSILON ? 1./w : 1.;
 
-        func(A_ptr, tps0_ptr[correspIndex], normals1.at<Vec3f>(v1, u1) * w);
+        func(A_ptr, tps0_ptr[correspIndex], normals1.at<Vec3d>(v1, u1) * w);
 
         for(int y = 0; y < transformDim; y++)
         {
@@ -752,13 +681,13 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
     CV_Assert(Rt.type() == CV_64FC1);
     const double * Rt_ptr = Rt.ptr<const double>();
 
-    AutoBuffer<float> diffs_x(correspsCount);
-    AutoBuffer<float> diffs_y(correspsCount);
-    float* diffs_x_ptr = diffs_x;
-    float* diffs_y_ptr = diffs_y;
+    AutoBuffer<double> diffs_x(correspsCount);
+    AutoBuffer<double> diffs_y(correspsCount);
+    double* diffs_x_ptr = diffs_x;
+    double* diffs_y_ptr = diffs_y;
 
-    AutoBuffer<Point3f> transformedPoints0(correspsCount);
-    Point3f * tps0_ptr = transformedPoints0;
+    AutoBuffer<Point3d> transformedPoints0(correspsCount);
+    Point3d * tps0_ptr = transformedPoints0;
 
     const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
 
@@ -770,11 +699,11 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
         int u0 = c[0], v0 = c[1];
         int u1 = c[2], v1 = c[3];
     
-        const Point3f& p0 = cloud0.at<Point3f>(v0,u0);
-        Point3f tp0;
-        tp0.x = (float)(p0.x * Rt_ptr[0] + p0.y * Rt_ptr[1] + p0.z * Rt_ptr[2] + Rt_ptr[3]);
-        tp0.y = (float)(p0.x * Rt_ptr[4] + p0.y * Rt_ptr[5] + p0.z * Rt_ptr[6] + Rt_ptr[7]);
-        tp0.z = (float)(p0.x * Rt_ptr[8] + p0.y * Rt_ptr[9] + p0.z * Rt_ptr[10] + Rt_ptr[11]);
+        const Point3d& p0 = cloud0.at<Point3d>(v0,u0);
+        Point3d tp0;
+        tp0.x = (double)(p0.x * Rt_ptr[0] + p0.y * Rt_ptr[1] + p0.z * Rt_ptr[2] + Rt_ptr[3]);
+        tp0.y = (double)(p0.x * Rt_ptr[4] + p0.y * Rt_ptr[5] + p0.z * Rt_ptr[6] + Rt_ptr[7]);
+        tp0.z = (double)(p0.x * Rt_ptr[8] + p0.y * Rt_ptr[9] + p0.z * Rt_ptr[10] + Rt_ptr[11]);
         int p2d_x = cvRound(fx * tp0.x / tp0.z + cx);
         int p2d_y = cvRound(fy * tp0.y / tp0.z + cy);
 
@@ -879,7 +808,7 @@ void computeProjectiveMatrix(const Mat& ksi, Mat& Rt)
 }
 
 static inline
-void calcRgbdEquationCoeffs(double* C, double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
+void calcRgbdEquationCoeffs(double* C, double dIdx, double dIdy, const Point3d& p3d, double fx, double fy)
 {
     double invz  = 1. / p3d.z,
            v0 = dIdx * fx * invz,
@@ -895,7 +824,7 @@ void calcRgbdEquationCoeffs(double* C, double dIdx, double dIdy, const Point3f& 
 }
 
 static inline
-void calcICPEquationCoeffs(double* C, const Point3f& p0, const Vec3f& n1)
+void calcICPEquationCoeffs(double* C, const Point3d& p0, const Vec3d& n1)
 {
     C[0] = -p0.z * n1[1] + p0.y * n1[2];
     C[1] =  p0.z * n1[0] - p0.x * n1[2];
@@ -906,7 +835,7 @@ void calcICPEquationCoeffs(double* C, const Point3f& p0, const Vec3f& n1)
 }
 
 static inline
-void calcFeatureXEquationCoeffs(double* C, const Point3f& p3d, double fx)
+void calcFeatureXEquationCoeffs(double* C, const Point3d& p3d, double fx)
 {
     double invz  = 1. / p3d.z;
 
@@ -919,7 +848,7 @@ void calcFeatureXEquationCoeffs(double* C, const Point3f& p3d, double fx)
 }
 
 static inline
-void calcFeatureYEquationCoeffs(double* C, const Point3f& p3d, double fy)
+void calcFeatureYEquationCoeffs(double* C, const Point3d& p3d, double fy)
 {
     double invz  = 1. / p3d.z;
 
@@ -949,7 +878,6 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
 
     const int minOverdetermScale = 20;
     const int minCorrespsCount = minOverdetermScale * transformDim;
-    //const float icpWeight = 10.0;
 
     std::vector<Mat> pyramidCameraMatrix;
 
@@ -1034,10 +962,10 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                vector<DMatch> matches;
                matcher->match ( descriptors_1, descriptors_2, matches );
 
-               float min_dist=10000, max_dist=0;
+               double min_dist=10000, max_dist=0;
                for ( int i = 0; i < descriptors_1.rows; i++ )
                {
-                   float dist = matches[i].distance;
+                   double dist = matches[i].distance;
                    if ( dist < min_dist ) min_dist = dist;
                    if ( dist > max_dist ) max_dist = dist;
                }
@@ -1045,7 +973,7 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                std::vector< DMatch > good_matches;
                for ( int i = 0; i < descriptors_1.rows; i++ )
                {
-                   if ( matches[i].distance <= max ( 2*min_dist, 30.0f ) )
+                   if ( matches[i].distance <= max ( 2*min_dist, 30.0 ) )
                    {
                        if(srcFrame->maskDepth.at<uchar>(keypoints_1[matches[i].queryIdx].pt.y, keypoints_1[matches[i].queryIdx].pt.x))
                            good_matches.push_back ( matches[i] );
@@ -1058,7 +986,7 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                //
                //std::vector< DMatch > good_matches;
                //for (int i = 0; i < matches.size(); i ++) {
-               //    float rejectRatio = 0.8;
+               //    double rejectRatio = 0.8;
                //    if (matches[i][0].distance / matches[i][1].distance > rejectRatio)
                //        continue;
                //    if(srcFrame->pyramidMask[level].at<uchar>(keypoints_1[matches[i][0].queryIdx].pt.y, keypoints_1[matches[i][0].queryIdx].pt.x))

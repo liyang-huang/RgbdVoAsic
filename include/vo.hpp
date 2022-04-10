@@ -3,6 +3,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/core/utility.hpp>
 
+#define MUL 65536.0  //  2^16
+
 using namespace cv;
   /** Object that contains a frame data.
    */
@@ -19,6 +21,8 @@ using namespace cv;
       Mat image;
       Mat depth;
       Mat mask;
+      Mat normals_ori;
+      Mat cloud_ori;
       Mat normals;
       Mat cloud;
   };
@@ -57,33 +61,33 @@ using namespace cv;
   {
   public:
 
-    static inline float
+    static inline double
     DEFAULT_MIN_DEPTH()
     {
-      return 0.f; // in meters
+      return 0; // in meters
     }
-    static inline float
+    static inline double
     DEFAULT_MAX_DEPTH()
     {
-      return 4.f*5000; // in meters
+      return 4*5000; // in meters
     }
-    static inline float
+    static inline double
     DEFAULT_MAX_DEPTH_DIFF()
     {
-      return 0.07f*5000; // in meters
+      return 0.07*5000; // in meters
     }
-    static inline float
+    static inline double
     DEFAULT_MAX_POINTS_PART()
     {
       //return 0.07f; // in [0, 1]
       return 1; // in [0, 1]
     }
-    static inline float
+    static inline double
     DEFAULT_MAX_TRANSLATION()
     {
-      return 0.15f*5000; // in meters
+      return 0.15*5000; // in meters
     }
-    static inline float
+    static inline double
     DEFAULT_MAX_ROTATION()
     {
       return 15; // in degrees
@@ -93,9 +97,9 @@ using namespace cv;
         return cameraMatrix;
     }
     Odometry();
-    Odometry(const Mat& cameraMatrix, float minDepth = DEFAULT_MIN_DEPTH(), float maxDepth = DEFAULT_MAX_DEPTH(),
-                 float maxDepthDiff = DEFAULT_MAX_DEPTH_DIFF(), const std::vector<int>& iterCounts = std::vector<int>(),
-                 const std::vector<float>& minGradientMagnitudes = std::vector<float>(), float maxPointsPart = DEFAULT_MAX_POINTS_PART());
+    Odometry(const Mat& cameraMatrix, double minDepth = DEFAULT_MIN_DEPTH(), double maxDepth = DEFAULT_MAX_DEPTH(),
+                 double maxDepthDiff = DEFAULT_MAX_DEPTH_DIFF(), const std::vector<int>& iterCounts = std::vector<int>(),
+                 const std::vector<double>& minGradientMagnitudes = std::vector<double>(), double maxPointsPart = DEFAULT_MAX_POINTS_PART());
 
 
     void setCameraMatrix(const cv::Mat &val)
