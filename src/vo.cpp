@@ -36,6 +36,29 @@ void setDefaultMinGradientMagnitudes(Mat& minGradientMagnitudes)
 }
 
 static
+void normalsComputer_ori(const Mat& points3d, int rows, int cols, Mat & maskNormal, Mat & normals) 
+{
+  normals.create(points3d.size(), CV_MAKETYPE(points3d.depth(), 3));
+  maskNormal = Mat(points3d.size(), CV_8UC1, Scalar(0));
+  for (int y = 0; y < rows - 1; ++y)
+  {
+    for (int x = 0; x < cols - 1; ++x)
+    {
+    	Vec3d du = points3d.at<Vec3d>(y,x+1) - points3d.at<Vec3d>(y,x);
+    	Vec3d dv = points3d.at<Vec3d>(y+1,x) - points3d.at<Vec3d>(y,x);
+        normals.at<Vec3d>(y,x) = du.cross(dv);
+        if(normals.at<Vec3d>(y,x)[0] != 0 || normals.at<Vec3d>(y,x)[1] != 0 || normals.at<Vec3d>(y,x)[2] != 0){
+        maskNormal.at<uchar>(y,x) = 255;
+    	double norm = sqrt(normals.at<Vec3d>(y,x)[0]*normals.at<Vec3d>(y,x)[0] + normals.at<Vec3d>(y,x)[1]*normals.at<Vec3d>(y,x)[1] +normals.at<Vec3d>(y,x)[2]*normals.at<Vec3d>(y,x)[2]);
+            normals.at<Vec3d>(y,x)[0] = normals.at<Vec3d>(y,x)[0] / norm;
+            normals.at<Vec3d>(y,x)[1] = normals.at<Vec3d>(y,x)[1] / norm;
+            normals.at<Vec3d>(y,x)[2] = normals.at<Vec3d>(y,x)[2] / norm;
+        }
+    }
+  }
+}
+
+static
 void normalsComputer(const Mat& points3d, int rows, int cols, Mat & normals) 
 {
   normals.create(points3d.size(), CV_MAKETYPE(points3d.depth(), 3));
@@ -45,11 +68,11 @@ void normalsComputer(const Mat& points3d, int rows, int cols, Mat & normals)
     {
     	Vec3d du = points3d.at<Vec3d>(y,x+1) - points3d.at<Vec3d>(y,x);
     	Vec3d dv = points3d.at<Vec3d>(y+1,x) - points3d.at<Vec3d>(y,x);
-        normals.at<Vec3d>(y,x) = du.cross(dv);
-    	double norm = sqrt(normals.at<Vec3d>(y,x)[0]*normals.at<Vec3d>(y,x)[0] + normals.at<Vec3d>(y,x)[1]*normals.at<Vec3d>(y,x)[1] +normals.at<Vec3d>(y,x)[2]*normals.at<Vec3d>(y,x)[2]);
-            normals.at<Vec3d>(y,x)[0] = normals.at<Vec3d>(y,x)[0] / norm;
-            normals.at<Vec3d>(y,x)[1] = normals.at<Vec3d>(y,x)[1] / norm;
-            normals.at<Vec3d>(y,x)[2] = normals.at<Vec3d>(y,x)[2] / norm;
+        normals.at<Vec3d>(y,x) = du.cross(dv); //MUL^2
+    	double norm = trunc(sqrt(normals.at<Vec3d>(y,x)[0]*normals.at<Vec3d>(y,x)[0] + normals.at<Vec3d>(y,x)[1]*normals.at<Vec3d>(y,x)[1] +normals.at<Vec3d>(y,x)[2]*normals.at<Vec3d>(y,x)[2])); //MUL^2
+            normals.at<Vec3d>(y,x)[0] = trunc(normals.at<Vec3d>(y,x)[0] * MUL / norm);
+            normals.at<Vec3d>(y,x)[1] = trunc(normals.at<Vec3d>(y,x)[1] * MUL / norm);
+            normals.at<Vec3d>(y,x)[2] = trunc(normals.at<Vec3d>(y,x)[2] * MUL / norm);
     }
   }
 }
@@ -133,7 +156,7 @@ Odometry::Odometry(const Mat& _cameraMatrix,
 
 template<typename T>
 void
-depthTo3dNoMask(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& points3d)
+depthTo3dNoMask_ori(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& points3d)
 {
   const T inv_fx = T(1) / K(0, 0);
   const T inv_fy = T(1) / K(1, 1);
@@ -174,6 +197,50 @@ depthTo3dNoMask(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& points3d
   }
 }
 
+template<typename T>
+void
+depthTo3dNoMask(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& points3d)
+{
+  const T fx = K(0, 0);
+  const T fy = K(1, 1);
+  const T ox = K(0, 2);
+  const T oy = K(1, 2);
+
+  // Build z
+  cv::Mat_<T> z_mat;
+  z_mat = in_depth;
+
+  for (int y = 0; y < in_depth.rows; ++y)
+  {
+    cv::Vec<T, 3>* point = points3d.ptr<cv::Vec<T, 3> >(y);
+    const T* depth = z_mat[y];
+    for (int x = 0; x < in_depth.cols; ++x, ++point, ++depth)
+    {
+        T z = *depth;
+        (*point)[0] = trunc(trunc(x*MUL - ox*MUL) * z / (fx*MUL) * MUL);
+        (*point)[1] = trunc(trunc(y*MUL - oy*MUL) * z / (fy*MUL) * MUL);
+        (*point)[2] = trunc(z * MUL);
+        //(*point)[0] = trunc(trunc(x*MUL - ox*MUL) * z / (fx*MUL));
+        //(*point)[1] = trunc(trunc(y*MUL - oy*MUL) * z / (fy*MUL));
+        //(*point)[2] = z;
+    }
+  }
+}
+
+void
+depthTo3d_ori(InputArray depth_in, InputArray K_in, OutputArray points3d_out)
+{
+  cv::Mat depth = depth_in.getMat();
+  cv::Mat K = K_in.getMat();
+  CV_Assert(K.cols == 3 && K.rows == 3 && K.depth() == CV_64F);
+  CV_Assert(depth.type() == CV_64FC1);
+
+  // Create 3D points in one go.
+  points3d_out.create(depth.size(), CV_MAKETYPE(K.depth(), 3));
+  cv::Mat points3d = points3d_out.getMat();
+  depthTo3dNoMask_ori<double>(depth, K, points3d);
+}
+
 void
 depthTo3d(InputArray depth_in, InputArray K_in, OutputArray points3d_out)
 {
@@ -190,7 +257,7 @@ depthTo3d(InputArray depth_in, InputArray K_in, OutputArray points3d_out)
 
 static
 void MaskGen(const Mat& mask, const Mat& Depth, double minDepth, double maxDepth,
-                        const Mat& Normal,
+                        const Mat& Normal_mask,
                         Mat& maskDepth)
 {
     minDepth = std::max(0.0, minDepth);
@@ -212,46 +279,8 @@ void MaskGen(const Mat& mask, const Mat& Depth, double minDepth, double maxDepth
         //patchNaNs(levelDepth, 0);
 
         maskDepth &= (levelDepth > minDepth) & (levelDepth < maxDepth);
-
-        if(!Normal.empty())
-        {
-            Mat validNormalMask = Normal == Normal; // otherwise it's Nan
-
-            CV_Assert(validNormalMask.type() == CV_8UC3);
-
-            std::vector<Mat> channelMasks;
-            split(validNormalMask, channelMasks);
-            validNormalMask = channelMasks[0] & channelMasks[1] & channelMasks[2];
-
-            maskDepth &= validNormalMask;
-        }
-    }
-}
-
-static
-void randomSubsetOfMask(Mat& mask, double part)
-{
-    const int minPointsCount = 1000; // minimum point count (we can process them fast)
-    const int nonzeros = countNonZero(mask);
-    const int needCount = std::max(minPointsCount, int(mask.total() * part));
-    if(needCount < nonzeros)
-    {
-        RNG rng;
-        Mat subset(mask.size(), CV_8UC1, Scalar(0));
-
-        int subsetSize = 0;
-        while(subsetSize < needCount)
-        {
-            int y = rng(mask.rows);
-            int x = rng(mask.cols);
-            if(mask.at<uchar>(y,x))
-            {
-                subset.at<uchar>(y,x) = 255;
-                mask.at<uchar>(y,x) = 0;
-                subsetSize++;
-            }
-        }
-        mask = subset;
+     
+        maskDepth &= Normal_mask;
     }
 }
 
@@ -284,36 +313,6 @@ void TexturedMaskGen(const Mat& dI_dx, const Mat& dI_dy,
         }
         texturedMask = texturedMask_pre & Mask;
 
-        randomSubsetOfMask(texturedMask, (double)maxPointsPart);
-    }
-}
-
-void NormalsMaskGen(const Mat& normals, const Mat& Mask, double maxPointsPart,
-                    Mat& maskNormal)
-{
-    if(!maskNormal.empty())
-    {
-        CV_Assert(maskNormal.size() == Mask.size());
-        CV_Assert(maskNormal.type() == Mask.type());
-    }
-    else
-    {
-        maskNormal = Mask.clone();
-        for(int y = 0; y < maskNormal.rows; y++)
-        {
-            const Vec3d *normals_row = normals.ptr<Vec3d>(y);
-            uchar *normalsMask_row = maskNormal.ptr<uchar>(y);
-            for(int x = 0; x < maskNormal.cols; x++)
-            {
-                Vec3d n = normals_row[x];
-                if(cvIsNaN(n[0]))
-                {
-                    CV_DbgAssert(cvIsNaN(n[1]) && cvIsNaN(n[2]));
-                    normalsMask_row[x] = 0;
-                }
-            }
-        }
-        randomSubsetOfMask(maskNormal, (double)maxPointsPart);
     }
 }
 
@@ -368,13 +367,15 @@ Size Odometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
     
     checkMask(frame->mask, frame->image.size());
 
+    depthTo3d_ori(frame->depth, cameraMatrix, frame->cloud_ori);
     depthTo3d(frame->depth, cameraMatrix, frame->cloud);
 
+    normalsComputer_ori(frame->cloud_ori, frame->depth.rows, frame->depth.cols, frame->maskNormal, frame->normals_ori);
     normalsComputer(frame->cloud, frame->depth.rows, frame->depth.cols, frame->normals);
     checkNormals(frame->normals, frame->depth.size());
 
     MaskGen(frame->mask, frame->depth, minDepth, maxDepth,
-            frame->normals, frame->maskDepth);
+            frame->maskNormal, frame->maskDepth);
 
     Sobel(frame->image, frame->dI_dx, CV_16S, 1, 0, sobelSize);
     Sobel(frame->image, frame->dI_dy, CV_16S, 0, 1, sobelSize);
@@ -383,7 +384,6 @@ Size Odometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
                     minGradientMagnitudes_vec[0], frame->maskDepth,
                     maxPointsPart, frame->maskText);
 
-    NormalsMaskGen(frame->normals, frame->maskDepth, maxPointsPart, frame->maskNormal);
     return frame->image.size();
 }
 
@@ -917,7 +917,7 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                 //exit(1);
                 int v_icp = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, 
                                             //resultRt_inv, srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskNormal,
-                                            resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskNormal,
+                                            resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskDepth,
                                             maxDepthDiff, corresps_icp);
                 
                 if (v_icp > v_max)
@@ -926,7 +926,7 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
 
                 if(corresps_rgbd.rows >= minCorrespsCount)
                 {
-                    calcRgbdLsmMatrices(srcFrame->image, srcFrame->cloud, resultRt,
+                    calcRgbdLsmMatrices(srcFrame->image, srcFrame->cloud_ori, resultRt,
                                         dstFrame->image, dstFrame->dI_dx, dstFrame->dI_dy,
                                         corresps_rgbd, fx, fy, sobelScale,
                                         AtA_rgbd, AtB_rgbd, rgbdEquationFuncPtr, transformDim);
@@ -937,8 +937,8 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
 
                 if(corresps_icp.rows >= minCorrespsCount)
                 {
-                    calcICPLsmMatrices(srcFrame->cloud, resultRt,
-                                       dstFrame->cloud, dstFrame->normals,
+                    calcICPLsmMatrices(srcFrame->cloud_ori, resultRt,
+                                       dstFrame->cloud_ori, dstFrame->normals_ori,
                                        corresps_icp, AtA_icp, AtB_icp, icpEquationFuncPtr, transformDim);
                     AtA += AtA_icp;
                     AtB += AtB_icp;
@@ -1006,7 +1006,7 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                //exit(1);
 
                Mat AtA_feature, AtB_feature;
-               calcFeatureLsmMatrices(srcFrame->cloud, resultRt,
+               calcFeatureLsmMatrices(srcFrame->cloud_ori, resultRt,
                                      corresps_feature, fx, fy, cx, cy,
                                      AtA_feature, AtB_feature, featureXEquationFuncPtr, featureYEquationFuncPtr, transformDim);
                AtA += AtA_feature;
