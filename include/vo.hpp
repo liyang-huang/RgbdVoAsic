@@ -4,6 +4,7 @@
 #include <opencv2/core/utility.hpp>
 
 #define MUL 65536.0  //  2^16
+//#define MUL 1048576.0  //  2^20
 
 using namespace cv;
   /** Object that contains a frame data.
@@ -55,6 +56,7 @@ using namespace cv;
     Mat maskDepth;
     Mat maskText;
     Mat maskNormal;
+    Mat maskNormal_ori;
   };
 
   class Odometry

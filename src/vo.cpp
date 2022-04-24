@@ -15,6 +15,10 @@ const double sobelScale = 1./8.;
 const bool pyramid_on = false;
 const int feature_iter_num = 5;
 
+double trunc(double num){
+	return (num<0)?ceil(num):floor(num);
+}
+
 static inline
 void setDefaultIterCounts(Mat& iterCounts)
 {
@@ -47,21 +51,23 @@ void normalsComputer_ori(const Mat& points3d, int rows, int cols, Mat & maskNorm
     	Vec3d du = points3d.at<Vec3d>(y,x+1) - points3d.at<Vec3d>(y,x);
     	Vec3d dv = points3d.at<Vec3d>(y+1,x) - points3d.at<Vec3d>(y,x);
         normals.at<Vec3d>(y,x) = du.cross(dv);
-        if(normals.at<Vec3d>(y,x)[0] != 0 || normals.at<Vec3d>(y,x)[1] != 0 || normals.at<Vec3d>(y,x)[2] != 0){
-        maskNormal.at<uchar>(y,x) = 255;
-    	double norm = sqrt(normals.at<Vec3d>(y,x)[0]*normals.at<Vec3d>(y,x)[0] + normals.at<Vec3d>(y,x)[1]*normals.at<Vec3d>(y,x)[1] +normals.at<Vec3d>(y,x)[2]*normals.at<Vec3d>(y,x)[2]);
-            normals.at<Vec3d>(y,x)[0] = normals.at<Vec3d>(y,x)[0] / norm;
-            normals.at<Vec3d>(y,x)[1] = normals.at<Vec3d>(y,x)[1] / norm;
-            normals.at<Vec3d>(y,x)[2] = normals.at<Vec3d>(y,x)[2] / norm;
+        if(normals.at<Vec3d>(y,x)[0] != 0 || normals.at<Vec3d>(y,x)[1] != 0 || normals.at<Vec3d>(y,x)[2] != 0)
+        {
+            maskNormal.at<uchar>(y,x) = 255;
+            double norm = sqrt(normals.at<Vec3d>(y,x)[0]*normals.at<Vec3d>(y,x)[0] + normals.at<Vec3d>(y,x)[1]*normals.at<Vec3d>(y,x)[1] +normals.at<Vec3d>(y,x)[2]*normals.at<Vec3d>(y,x)[2]);
+                normals.at<Vec3d>(y,x)[0] = normals.at<Vec3d>(y,x)[0] / norm;
+                normals.at<Vec3d>(y,x)[1] = normals.at<Vec3d>(y,x)[1] / norm;
+                normals.at<Vec3d>(y,x)[2] = normals.at<Vec3d>(y,x)[2] / norm;
         }
     }
   }
 }
 
 static
-void normalsComputer(const Mat& points3d, int rows, int cols, Mat & normals) 
+void normalsComputer(const Mat& points3d, int rows, int cols, Mat & maskNormal, Mat & normals) 
 {
   normals.create(points3d.size(), CV_MAKETYPE(points3d.depth(), 3));
+  maskNormal = Mat(points3d.size(), CV_8UC1, Scalar(0));
   for (int y = 0; y < rows - 1; ++y)
   {
     for (int x = 0; x < cols - 1; ++x)
@@ -69,10 +75,14 @@ void normalsComputer(const Mat& points3d, int rows, int cols, Mat & normals)
     	Vec3d du = points3d.at<Vec3d>(y,x+1) - points3d.at<Vec3d>(y,x);
     	Vec3d dv = points3d.at<Vec3d>(y+1,x) - points3d.at<Vec3d>(y,x);
         normals.at<Vec3d>(y,x) = du.cross(dv); //MUL^2
-    	double norm = trunc(sqrt(normals.at<Vec3d>(y,x)[0]*normals.at<Vec3d>(y,x)[0] + normals.at<Vec3d>(y,x)[1]*normals.at<Vec3d>(y,x)[1] +normals.at<Vec3d>(y,x)[2]*normals.at<Vec3d>(y,x)[2])); //MUL^2
-            normals.at<Vec3d>(y,x)[0] = trunc(normals.at<Vec3d>(y,x)[0] * MUL / norm);
-            normals.at<Vec3d>(y,x)[1] = trunc(normals.at<Vec3d>(y,x)[1] * MUL / norm);
-            normals.at<Vec3d>(y,x)[2] = trunc(normals.at<Vec3d>(y,x)[2] * MUL / norm);
+        if(normals.at<Vec3d>(y,x)[0] != 0 || normals.at<Vec3d>(y,x)[1] != 0 || normals.at<Vec3d>(y,x)[2] != 0)
+        {
+            maskNormal.at<uchar>(y,x) = 255;
+            double norm = trunc(sqrt(normals.at<Vec3d>(y,x)[0]*normals.at<Vec3d>(y,x)[0] + normals.at<Vec3d>(y,x)[1]*normals.at<Vec3d>(y,x)[1] +normals.at<Vec3d>(y,x)[2]*normals.at<Vec3d>(y,x)[2])); //MUL^2
+                normals.at<Vec3d>(y,x)[0] = trunc(normals.at<Vec3d>(y,x)[0] * MUL / norm);
+                normals.at<Vec3d>(y,x)[1] = trunc(normals.at<Vec3d>(y,x)[1] * MUL / norm);
+                normals.at<Vec3d>(y,x)[2] = trunc(normals.at<Vec3d>(y,x)[2] * MUL / norm);
+        }
     }
   }
 }
@@ -119,6 +129,7 @@ void OdometryFrame::releasePyramids()
     maskDepth.release();
     maskText.release();
     maskNormal.release();
+    maskNormal_ori.release();
 }
 
 
@@ -357,36 +368,6 @@ void checkNormals(const Mat& normals, const Size& depthSize)
         CV_Error(Error::StsBadSize, "Normals type has to be CV_64FC3.");
 }
 
-
-Size Odometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
-{
-    
-    checkImage(frame->image);
-
-    checkDepth(frame->depth, frame->image.size());
-    
-    checkMask(frame->mask, frame->image.size());
-
-    depthTo3d_ori(frame->depth, cameraMatrix, frame->cloud_ori);
-    depthTo3d(frame->depth, cameraMatrix, frame->cloud);
-
-    normalsComputer_ori(frame->cloud_ori, frame->depth.rows, frame->depth.cols, frame->maskNormal, frame->normals_ori);
-    normalsComputer(frame->cloud, frame->depth.rows, frame->depth.cols, frame->normals);
-    checkNormals(frame->normals, frame->depth.size());
-
-    MaskGen(frame->mask, frame->depth, minDepth, maxDepth,
-            frame->maskNormal, frame->maskDepth);
-
-    Sobel(frame->image, frame->dI_dx, CV_16S, 1, 0, sobelSize);
-    Sobel(frame->image, frame->dI_dy, CV_16S, 0, 1, sobelSize);
-    std::vector<int> minGradientMagnitudes_vec = minGradientMagnitudes;
-    TexturedMaskGen(frame->dI_dx, frame->dI_dy,
-                    minGradientMagnitudes_vec[0], frame->maskDepth,
-                    maxPointsPart, frame->maskText);
-
-    return frame->image.size();
-}
-
 static
 int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
                      const Mat& depth0, const Mat& validMask0,
@@ -576,14 +557,27 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
               w_sobelScale * dI_dx1.at<short int>(v1,u1),
               w_sobelScale * dI_dy1.at<short int>(v1,u1),
               tp0, fx, fy);
+         //double invz  = 1. / p3d.z,
+         //       v0 = dIdx * fx * invz,
+         //       v1 = dIdy * fy * invz,
+         //       v2 = -(v0 * p3d.x + v1 * p3d.y) * invz;
+
+         //A_ptr[0] = -p3d.z * v1 + p3d.y * v2;
+         //A_ptr[1] =  p3d.z * v0 - p3d.x * v2;
+         //A_ptr[2] = -p3d.y * v0 + p3d.x * v1;
+         //A_ptr[3] = v0;
+         //A_ptr[4] = v1;
+         //A_ptr[5] = v2;
 
         for(int y = 0; y < transformDim; y++)
         {
             double* AtA_ptr = AtA.ptr<double>(y);
             for(int x = y; x < transformDim; x++)
                 AtA_ptr[x] += A_ptr[y] * A_ptr[x];
+                //AtA_ptr[x] += trunc(A_ptr[y] * A_ptr[x] / MUL);
 
             AtB_ptr[y] += A_ptr[y] * w * diffs_ptr[correspIndex];
+            //AtB_ptr[y] += trunc(A_ptr[y] * diffs_ptr[correspIndex] / w);
         }
     }
 
@@ -594,6 +588,87 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
 
 static
 void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
+                        const Mat& cloud1, const Mat& normals1,
+                        const Mat& corresps,
+                        Mat& AtA, Mat& AtB, CalcICPEquationCoeffsPtr func, int transformDim)
+{
+    AtA = Mat(transformDim, transformDim, CV_64FC1, Scalar(0));
+    AtB = Mat(transformDim, 1, CV_64FC1, Scalar(0));
+    double* AtB_ptr = AtB.ptr<double>();
+
+    const int correspsCount = corresps.rows;
+
+    CV_Assert(Rt.type() == CV_64FC1);
+    const double * Rt_ptr = Rt.ptr<const double>();
+
+    AutoBuffer<double> diffs(correspsCount);
+    double * diffs_ptr = diffs;
+
+    AutoBuffer<Point3d> transformedPoints0(correspsCount);
+    Point3d * tps0_ptr = transformedPoints0;
+
+    const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
+
+    double sigma = 0;
+    for(int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
+    {
+        const Vec4i& c = corresps_ptr[correspIndex];
+        int u0 = c[0], v0 = c[1];
+        int u1 = c[2], v1 = c[3];
+
+        const Point3d& p0 = cloud0.at<Point3d>(v0,u0);
+        Point3d tp0;
+        tp0.x = trunc(p0.x * trunc(Rt_ptr[0] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[1] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[2]  * MUL) / MUL) + trunc(Rt_ptr[3]  * MUL);
+        tp0.y = trunc(p0.x * trunc(Rt_ptr[4] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[5] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[6]  * MUL) / MUL) + trunc(Rt_ptr[7]  * MUL);
+        tp0.z = trunc(p0.x * trunc(Rt_ptr[8] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[9] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[10] * MUL) / MUL) + trunc(Rt_ptr[11] * MUL);
+
+        Vec3d n1 = normals1.at<Vec3d>(v1, u1);
+        Point3d v = cloud1.at<Point3d>(v1,u1) - tp0; //MUL
+
+        tps0_ptr[correspIndex] = tp0; //MUL
+        diffs_ptr[correspIndex] = n1[0] * v.x + n1[1] * v.y + n1[2] * v.z; //MUL^2
+        //std::cout << "====================test=======================" << diffs_ptr[0] <<  std::endl;
+        //exit(1);
+        sigma += diffs_ptr[correspIndex] * diffs_ptr[correspIndex]; //MUL^4
+    }
+
+    sigma = trunc(std::sqrt(trunc(sigma/correspsCount))); //MUL^2
+
+    std::vector<double> A_buf(transformDim);
+    double* A_ptr = &A_buf[0];
+    for(int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
+    {
+        const Vec4i& c = corresps_ptr[correspIndex];
+        int u1 = c[2], v1 = c[3];
+
+        double w = sigma + std::abs(diffs_ptr[correspIndex]); //MUL^2
+        //w = w > DBL_EPSILON ? 1./w : 1.;
+
+        //func(A_ptr, tps0_ptr[correspIndex], normals1.at<Vec3d>(v1, u1) * w);
+        A_ptr[0] =trunc(-tps0_ptr[correspIndex].z * normals1.at<Vec3d>(v1, u1)[1] * MUL /  w) + trunc(tps0_ptr[correspIndex].y * normals1.at<Vec3d>(v1, u1)[2] * MUL / w);
+        A_ptr[1] =trunc( tps0_ptr[correspIndex].z * normals1.at<Vec3d>(v1, u1)[0] * MUL /  w) - trunc(tps0_ptr[correspIndex].x * normals1.at<Vec3d>(v1, u1)[2] * MUL / w);
+        A_ptr[2] =trunc(-tps0_ptr[correspIndex].y * normals1.at<Vec3d>(v1, u1)[0] * MUL /  w) + trunc(tps0_ptr[correspIndex].x * normals1.at<Vec3d>(v1, u1)[1] * MUL / w);
+        A_ptr[3] =trunc(normals1.at<Vec3d>(v1, u1)[0] * MUL * MUL / w);
+        A_ptr[4] =trunc(normals1.at<Vec3d>(v1, u1)[1] * MUL * MUL / w);
+        A_ptr[5] =trunc(normals1.at<Vec3d>(v1, u1)[2] * MUL * MUL / w);
+
+        for(int y = 0; y < transformDim; y++)
+        {
+            double* AtA_ptr = AtA.ptr<double>(y);
+            for(int x = y; x < transformDim; x++)
+                AtA_ptr[x] += trunc(A_ptr[y] * A_ptr[x] / MUL);
+
+            AtB_ptr[y] += trunc(A_ptr[y] * diffs_ptr[correspIndex] / w);
+        }
+    }
+
+    for(int y = 0; y < transformDim; y++)
+        for(int x = y+1; x < transformDim; x++)
+            AtA.at<double>(x,y) = AtA.at<double>(y,x);
+}
+
+static
+void calcICPLsmMatrices_ori(const Mat& cloud0, const Mat& Rt,
                         const Mat& cloud1, const Mat& normals1,
                         const Mat& corresps,
                         Mat& AtA, Mat& AtB, CalcICPEquationCoeffsPtr func, int transformDim)
@@ -650,7 +725,13 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
         double w = sigma + std::abs(diffs_ptr[correspIndex]);
         w = w > DBL_EPSILON ? 1./w : 1.;
 
-        func(A_ptr, tps0_ptr[correspIndex], normals1.at<Vec3d>(v1, u1) * w);
+        //func(A_ptr, tps0_ptr[correspIndex], normals1.at<Vec3d>(v1, u1) * w);
+        A_ptr[0] = -tps0_ptr[correspIndex].z * normals1.at<Vec3d>(v1, u1)[1] * w + tps0_ptr[correspIndex].y * normals1.at<Vec3d>(v1, u1)[2] * w;
+        A_ptr[1] =  tps0_ptr[correspIndex].z * normals1.at<Vec3d>(v1, u1)[0] * w - tps0_ptr[correspIndex].x * normals1.at<Vec3d>(v1, u1)[2] * w;
+        A_ptr[2] = -tps0_ptr[correspIndex].y * normals1.at<Vec3d>(v1, u1)[0] * w + tps0_ptr[correspIndex].x * normals1.at<Vec3d>(v1, u1)[1] * w;
+        A_ptr[3] = normals1.at<Vec3d>(v1, u1)[0] * w;
+        A_ptr[4] = normals1.at<Vec3d>(v1, u1)[1] * w;
+        A_ptr[5] = normals1.at<Vec3d>(v1, u1)[2] * w;
 
         for(int y = 0; y < transformDim; y++)
         {
@@ -860,6 +941,35 @@ void calcFeatureYEquationCoeffs(double* C, const Point3d& p3d, double fy)
     C[5] = -(fy * p3d.y * invz * invz);
 }
 
+Size Odometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
+{
+    
+    checkImage(frame->image);
+
+    checkDepth(frame->depth, frame->image.size());
+    
+    checkMask(frame->mask, frame->image.size());
+
+    depthTo3d_ori(frame->depth, cameraMatrix, frame->cloud_ori);
+    depthTo3d(frame->depth, cameraMatrix, frame->cloud);
+
+    normalsComputer_ori(frame->cloud_ori, frame->depth.rows, frame->depth.cols, frame->maskNormal_ori, frame->normals_ori);
+    normalsComputer(frame->cloud, frame->depth.rows, frame->depth.cols, frame->maskNormal, frame->normals);
+    checkNormals(frame->normals, frame->depth.size());
+
+    MaskGen(frame->mask, frame->depth, minDepth, maxDepth,
+            frame->maskNormal, frame->maskDepth);
+
+    Sobel(frame->image, frame->dI_dx, CV_16S, 1, 0, sobelSize);
+    Sobel(frame->image, frame->dI_dy, CV_16S, 0, 1, sobelSize);
+    std::vector<int> minGradientMagnitudes_vec = minGradientMagnitudes;
+    TexturedMaskGen(frame->dI_dx, frame->dI_dy,
+                    minGradientMagnitudes_vec[0], frame->maskDepth,
+                    maxPointsPart, frame->maskText);
+
+    return frame->image.size();
+}
+
 bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFrame, Mat& Rt, int& v_max, const Mat& initRt) const
 {
     Size srcSize = prepareFrameCache(srcFrame, OdometryFrame::CACHE_SRC);
@@ -937,11 +1047,20 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
 
                 if(corresps_icp.rows >= minCorrespsCount)
                 {
-                    calcICPLsmMatrices(srcFrame->cloud_ori, resultRt,
-                                       dstFrame->cloud_ori, dstFrame->normals_ori,
+                    Mat AtA_icp_ori, AtB_icp_ori;
+                    //calcICPLsmMatrices_ori(srcFrame->cloud_ori, resultRt,
+                    //                       dstFrame->cloud_ori, dstFrame->normals_ori,
+                    //                       corresps_icp, AtA_icp_ori, AtB_icp_ori, icpEquationFuncPtr, transformDim);
+                    calcICPLsmMatrices(srcFrame->cloud, resultRt,
+                                       dstFrame->cloud, dstFrame->normals,
                                        corresps_icp, AtA_icp, AtB_icp, icpEquationFuncPtr, transformDim);
-                    AtA += AtA_icp;
-                    AtB += AtB_icp;
+                    //cout << "AtA_icp " << AtA_icp / MUL << endl;
+                    //cout << "AtB_icp " << AtB_icp / MUL << endl;
+                    //cout << "AtA_icp_ori " << AtA_icp_ori << endl;
+                    //cout << "AtB_icp_ori " << AtB_icp_ori << endl;
+                    //exit(1);
+                    AtA += AtA_icp / MUL;
+                    AtB += AtB_icp / MUL;
                 }
             }
             else 
