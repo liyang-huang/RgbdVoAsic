@@ -3,8 +3,8 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/core/utility.hpp>
 
-#define MUL 65536.0  //  2^16
-//#define MUL 1048576.0  //  2^20
+//#define MUL 65536.0  //  2^16
+#define MUL 1048576.0  //  2^20
 
 using namespace cv;
   /** Object that contains a frame data.

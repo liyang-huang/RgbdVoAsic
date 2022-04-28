@@ -497,7 +497,7 @@ void (*CalcFeatureYEquationCoeffsPtr)(double*, const Point3d&, double);
 
 
 static
-void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
+void calcRgbdLsmMatrices_ori(const Mat& image0, const Mat& cloud0, const Mat& Rt,
                const Mat& image1, const Mat& dI_dx1, const Mat& dI_dy1,
                const Mat& corresps, double fx, double fy, double sobelScaleIn,
                Mat& AtA, Mat& AtB, CalcRgbdEquationCoeffsPtr func, int transformDim)
@@ -557,27 +557,103 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
               w_sobelScale * dI_dx1.at<short int>(v1,u1),
               w_sobelScale * dI_dy1.at<short int>(v1,u1),
               tp0, fx, fy);
-         //double invz  = 1. / p3d.z,
-         //       v0 = dIdx * fx * invz,
-         //       v1 = dIdy * fy * invz,
-         //       v2 = -(v0 * p3d.x + v1 * p3d.y) * invz;
-
-         //A_ptr[0] = -p3d.z * v1 + p3d.y * v2;
-         //A_ptr[1] =  p3d.z * v0 - p3d.x * v2;
-         //A_ptr[2] = -p3d.y * v0 + p3d.x * v1;
-         //A_ptr[3] = v0;
-         //A_ptr[4] = v1;
-         //A_ptr[5] = v2;
 
         for(int y = 0; y < transformDim; y++)
         {
             double* AtA_ptr = AtA.ptr<double>(y);
             for(int x = y; x < transformDim; x++)
                 AtA_ptr[x] += A_ptr[y] * A_ptr[x];
-                //AtA_ptr[x] += trunc(A_ptr[y] * A_ptr[x] / MUL);
 
             AtB_ptr[y] += A_ptr[y] * w * diffs_ptr[correspIndex];
-            //AtB_ptr[y] += trunc(A_ptr[y] * diffs_ptr[correspIndex] / w);
+        }
+    }
+
+    for(int y = 0; y < transformDim; y++)
+        for(int x = y+1; x < transformDim; x++)
+            AtA.at<double>(x,y) = AtA.at<double>(y,x);
+}
+
+static
+void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
+               const Mat& image1, const Mat& dI_dx1, const Mat& dI_dy1,
+               const Mat& corresps, double fx, double fy, double sobelScaleIn,
+               Mat& AtA, Mat& AtB, CalcRgbdEquationCoeffsPtr func, int transformDim)
+{
+    AtA = Mat(transformDim, transformDim, CV_64FC1, Scalar(0));
+    AtB = Mat(transformDim, 1, CV_64FC1, Scalar(0));
+    double* AtB_ptr = AtB.ptr<double>();
+
+    const int correspsCount = corresps.rows;
+
+    CV_Assert(Rt.type() == CV_64FC1);
+    const double * Rt_ptr = Rt.ptr<const double>();
+
+    AutoBuffer<double> diffs(correspsCount);
+    double* diffs_ptr = diffs;
+
+    const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
+
+    double sigma = 0;
+    for(int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
+    {
+         const Vec4i& c = corresps_ptr[correspIndex];
+         int u0 = c[0], v0 = c[1];
+         int u1 = c[2], v1 = c[3];
+
+         diffs_ptr[correspIndex] = static_cast<double>(static_cast<int>(image0.at<uchar>(v0,u0)) -
+                                                      static_cast<int>(image1.at<uchar>(v1,u1)));
+         //std::cout << "====================test=======================" << diffs_ptr[0] <<  std::endl;
+         //std::cout << static_cast<int>(image0.at<uchar>(v0,u0)) <<  std::endl;
+         //std::cout << static_cast<int>(image1.at<uchar>(v1,u1)) <<  std::endl;
+	 //exit(1);
+         sigma += diffs_ptr[correspIndex] * diffs_ptr[correspIndex];
+    }
+    sigma = std::sqrt(sigma/correspsCount);
+
+    std::vector<double> A_buf(transformDim);
+    double* A_ptr = &A_buf[0];
+
+    for(int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
+    {
+         const Vec4i& c = corresps_ptr[correspIndex];
+         int u0 = c[0], v0 = c[1];
+         int u1 = c[2], v1 = c[3];
+
+         double w = sigma + std::abs(diffs_ptr[correspIndex]);
+         w = w > DBL_EPSILON ? 1./w : 1.;
+
+         double w_sobelScale = w * sobelScaleIn;
+
+         const Point3d& p0 = cloud0.at<Point3d>(v0,u0);
+         Point3d tp0;
+         tp0.x = trunc(p0.x * trunc(Rt_ptr[0] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[1] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[2]  * MUL) / MUL) + trunc(Rt_ptr[3]  * MUL);
+         tp0.y = trunc(p0.x * trunc(Rt_ptr[4] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[5] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[6]  * MUL) / MUL) + trunc(Rt_ptr[7]  * MUL);
+         tp0.z = trunc(p0.x * trunc(Rt_ptr[8] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[9] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[10] * MUL) / MUL) + trunc(Rt_ptr[11] * MUL);
+
+         //func(A_ptr,
+         //     w_sobelScale * dI_dx1.at<short int>(v1,u1),
+         //     w_sobelScale * dI_dy1.at<short int>(v1,u1),
+         //     tp0, fx, fy);
+         double invz  = 1. / tp0.z;
+         double invzw  = invz * w_sobelScale;
+         double tmp_v0 = trunc(dI_dx1.at<short int>(v1,u1) * trunc(fx * MUL) * MUL * invzw);
+         double tmp_v1 = trunc(dI_dy1.at<short int>(v1,u1) * trunc(fy * MUL) * MUL * invzw);
+         double tmp_v2 = trunc(-(tmp_v0 * tp0.x + tmp_v1 * tp0.y) * invz);
+
+         A_ptr[0] = trunc((-tp0.z * tmp_v1 + tp0.y * tmp_v2) / MUL);
+         A_ptr[1] = trunc(( tp0.z * tmp_v0 - tp0.x * tmp_v2) / MUL);
+         A_ptr[2] = trunc((-tp0.y * tmp_v0 + tp0.x * tmp_v1) / MUL);
+         A_ptr[3] = tmp_v0;
+         A_ptr[4] = tmp_v1;
+         A_ptr[5] = tmp_v2;
+
+        for(int y = 0; y < transformDim; y++)
+        {
+            double* AtA_ptr = AtA.ptr<double>(y);
+            for(int x = y; x < transformDim; x++)
+                AtA_ptr[x] += trunc(A_ptr[y] * A_ptr[x] / MUL);
+
+            AtB_ptr[y] += trunc(A_ptr[y] * diffs_ptr[correspIndex] * w);
         }
     }
 
@@ -748,8 +824,7 @@ void calcICPLsmMatrices_ori(const Mat& cloud0, const Mat& Rt,
             AtA.at<double>(x,y) = AtA.at<double>(y,x);
 }
 
-
-void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
+void calcFeatureLsmMatrices_ori(const Mat& cloud0, const Mat& Rt,
                const Mat& corresps, double fx, double fy, double cx, double cy,
                Mat& AtA, Mat& AtB, CalcFeatureXEquationCoeffsPtr func_x, CalcFeatureYEquationCoeffsPtr func_y, int transformDim)
 {
@@ -812,16 +887,127 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
         w_x = w_x > DBL_EPSILON ? 1./w_x : 1.;
         w_y = w_y > DBL_EPSILON ? 1./w_y : 1.;
 
-        func_x(A_ptr_x, tps0_ptr[correspIndex], fx * w_x);
-        func_y(A_ptr_y, tps0_ptr[correspIndex], fy * w_y);
+        Point3d p3d;
+        p3d = tps0_ptr[correspIndex];
+        double invz  = 1. / p3d.z;
+        //func_x(A_ptr_x, tps0_ptr[correspIndex], fx * w_x);
+        A_ptr_x[0] = -(fx * p3d.x * p3d.y * invz * invz);
+        A_ptr_x[1] = fx + fx * p3d.x * p3d.x * invz * invz;
+        A_ptr_x[2] = -(fx * p3d.y * invz);
+        A_ptr_x[3] = fx * invz;
+        A_ptr_x[4] = 0;
+        A_ptr_x[5] = -(fx * p3d.x * invz * invz);
+        //func_y(A_ptr_y, tps0_ptr[correspIndex], fy * w_y);
+        A_ptr_y[0] = -fy - (fy * p3d.y * p3d.y * invz * invz);
+        A_ptr_y[1] = fy * p3d.x * p3d.x * invz * invz;
+        A_ptr_y[2] = fy * p3d.x * invz;
+        A_ptr_y[3] = 0;
+        A_ptr_y[4] = fy * invz;
+        A_ptr_y[5] = -(fy * p3d.y * invz * invz);
 
         for(int y = 0; y < transformDim; y++)
         {
             double* AtA_ptr = AtA.ptr<double>(y);
             for(int x = y; x < transformDim; x++)
-                AtA_ptr[x] += A_ptr_x[y] * A_ptr_x[x] + A_ptr_y[y] * A_ptr_y[x];
+                AtA_ptr[x] += A_ptr_x[y] * A_ptr_x[x] * w_x * w_x  + A_ptr_y[y] * A_ptr_y[x] * w_y * w_y;
 
-            AtB_ptr[y] += A_ptr_x[y] * w_x * diffs_x_ptr[correspIndex] + A_ptr_y[y] * w_y * diffs_y_ptr[correspIndex];
+            AtB_ptr[y] += A_ptr_x[y] * w_x * w_x * diffs_x_ptr[correspIndex] + A_ptr_y[y] * w_y * w_y * diffs_y_ptr[correspIndex];
+        }
+    }
+
+    for(int y = 0; y < transformDim; y++)
+        for(int x = y+1; x < transformDim; x++)
+            AtA.at<double>(x,y) = AtA.at<double>(y,x);
+
+}
+
+void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
+               const Mat& corresps, double fx, double fy, double cx, double cy,
+               Mat& AtA, Mat& AtB, CalcFeatureXEquationCoeffsPtr func_x, CalcFeatureYEquationCoeffsPtr func_y, int transformDim)
+{
+    AtA = Mat(transformDim, transformDim, CV_64FC1, Scalar(0));
+    AtB = Mat(transformDim, 1, CV_64FC1, Scalar(0));
+    double* AtB_ptr = AtB.ptr<double>();
+
+    const int correspsCount = corresps.rows;
+
+    CV_Assert(Rt.type() == CV_64FC1);
+    const double * Rt_ptr = Rt.ptr<const double>();
+
+    AutoBuffer<double> diffs_x(correspsCount);
+    AutoBuffer<double> diffs_y(correspsCount);
+    double* diffs_x_ptr = diffs_x;
+    double* diffs_y_ptr = diffs_y;
+
+    AutoBuffer<Point3d> transformedPoints0(correspsCount);
+    Point3d * tps0_ptr = transformedPoints0;
+
+    const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
+
+    double sigma_x = 0;
+    double sigma_y = 0;
+    for(int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
+    {
+        const Vec4i& c = corresps_ptr[correspIndex];
+        int u0 = c[0], v0 = c[1];
+        int u1 = c[2], v1 = c[3];
+    
+        const Point3d& p0 = cloud0.at<Point3d>(v0,u0);
+        Point3d tp0;
+        tp0.x = trunc(p0.x * trunc(Rt_ptr[0] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[1] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[2]  * MUL) / MUL) + trunc(Rt_ptr[3]  * MUL);
+        tp0.y = trunc(p0.x * trunc(Rt_ptr[4] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[5] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[6]  * MUL) / MUL) + trunc(Rt_ptr[7]  * MUL);
+        tp0.z = trunc(p0.x * trunc(Rt_ptr[8] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[9] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[10] * MUL) / MUL) + trunc(Rt_ptr[11] * MUL);
+        int p2d_x = cvRound( (trunc(trunc(fx * MUL) * tp0.x / tp0.z) + trunc(cx * MUL)) / MUL);
+        int p2d_y = cvRound( (trunc(trunc(fy * MUL) * tp0.y / tp0.z) + trunc(cy * MUL)) / MUL);
+
+        tps0_ptr[correspIndex] = tp0;
+        //diffs_x_ptr[correspIndex] = p2d_x - u1;
+        //diffs_y_ptr[correspIndex] = p2d_y - v1;
+        diffs_x_ptr[correspIndex] = u1 - p2d_x;
+        diffs_y_ptr[correspIndex] = v1 - p2d_y;
+        sigma_x += diffs_x_ptr[correspIndex] * diffs_x_ptr[correspIndex];
+        sigma_y += diffs_y_ptr[correspIndex] * diffs_y_ptr[correspIndex];
+    }
+    //exit(1);
+
+    sigma_x = std::sqrt(sigma_x/correspsCount);
+    sigma_y = std::sqrt(sigma_y/correspsCount);
+
+    std::vector<double> A_buf_x(transformDim);
+    std::vector<double> A_buf_y(transformDim);
+    double* A_ptr_x = &A_buf_x[0];
+    double* A_ptr_y = &A_buf_y[0];
+    for(int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
+    {
+        double w_x = sigma_x + std::abs(diffs_x_ptr[correspIndex]);
+        double w_y = sigma_y + std::abs(diffs_y_ptr[correspIndex]);
+        w_x = w_x > DBL_EPSILON ? 1./w_x : 1.;
+        w_y = w_y > DBL_EPSILON ? 1./w_y : 1.;
+
+        //func_x(A_ptr_x, tps0_ptr[correspIndex], fx * w_x);
+        double z_squared = trunc(tps0_ptr[correspIndex].z * tps0_ptr[correspIndex].z);
+        A_ptr_x[0] = -( trunc( trunc(fx * MUL) * tps0_ptr[correspIndex].x * tps0_ptr[correspIndex].y / z_squared ) );
+        A_ptr_x[1] = trunc(fx * MUL) + trunc( trunc(fx * MUL) * tps0_ptr[correspIndex].x * tps0_ptr[correspIndex].x / z_squared);
+        A_ptr_x[2] = -( trunc( trunc(fx * MUL) * tps0_ptr[correspIndex].y / tps0_ptr[correspIndex].z ) );
+        A_ptr_x[3] = trunc( trunc(fx * MUL) * MUL / tps0_ptr[correspIndex].z );
+        A_ptr_x[4] = 0;
+        A_ptr_x[5] = -( trunc(trunc(fx * MUL)  * tps0_ptr[correspIndex].x * MUL  / z_squared) );
+
+        //func_y(A_ptr_y, tps0_ptr[correspIndex], fy * w_y);
+        A_ptr_y[0] = -trunc(fy * MUL) - trunc(trunc(fy * MUL) * tps0_ptr[correspIndex].y * tps0_ptr[correspIndex].y /z_squared);
+        A_ptr_y[1] = trunc(trunc(fy * MUL) * tps0_ptr[correspIndex].x * tps0_ptr[correspIndex].x / z_squared);
+        A_ptr_y[2] = trunc(trunc(fy * MUL) * tps0_ptr[correspIndex].x / tps0_ptr[correspIndex].z);
+        A_ptr_y[3] = 0;
+        A_ptr_y[4] = trunc(trunc(fy * MUL) * MUL / tps0_ptr[correspIndex].z);
+        A_ptr_y[5] = -trunc(trunc(fy * MUL) * tps0_ptr[correspIndex].y * MUL /z_squared);
+
+        for(int y = 0; y < transformDim; y++)
+        {
+            double* AtA_ptr = AtA.ptr<double>(y);
+            for(int x = y; x < transformDim; x++)
+                AtA_ptr[x] += trunc(A_ptr_x[y] * A_ptr_x[x] * w_x * w_x / MUL) + trunc(A_ptr_y[y] * A_ptr_y[x] * w_y * w_y / MUL);
+
+            AtB_ptr[y] += trunc(A_ptr_x[y] * w_x * w_x * diffs_x_ptr[correspIndex]) + trunc(A_ptr_y[y] * w_y * w_y * diffs_y_ptr[correspIndex]);
         }
     }
 
@@ -840,6 +1026,10 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
         return false;
 
     solve(AtA, AtB, x, DECOMP_CHOLESKY);
+    //cout << "AtA " << AtA << endl;
+    //cout << "AtB " << AtB << endl;
+    //cout << "x " << x << endl;
+    //exit(1);
 
     return true;
 }
@@ -1036,18 +1226,28 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
 
                 if(corresps_rgbd.rows >= minCorrespsCount)
                 {
-                    calcRgbdLsmMatrices(srcFrame->image, srcFrame->cloud_ori, resultRt,
+                    //Mat AtA_rgbd_ori, AtB_rgbd_ori;
+                    //calcRgbdLsmMatrices_ori(srcFrame->image, srcFrame->cloud_ori, resultRt,
+                    //                        dstFrame->image, dstFrame->dI_dx, dstFrame->dI_dy,
+                    //                        corresps_rgbd, fx, fy, sobelScale,
+                    //                        AtA_rgbd_ori, AtB_rgbd_ori, rgbdEquationFuncPtr, transformDim);
+                    calcRgbdLsmMatrices(srcFrame->image, srcFrame->cloud, resultRt,
                                         dstFrame->image, dstFrame->dI_dx, dstFrame->dI_dy,
                                         corresps_rgbd, fx, fy, sobelScale,
                                         AtA_rgbd, AtB_rgbd, rgbdEquationFuncPtr, transformDim);
 
-                    AtA += AtA_rgbd;
-                    AtB += AtB_rgbd;
+                    //cout << "AtA_rgbd " << AtA_rgbd / MUL << endl;
+                    //cout << "AtB_rgbd " << AtB_rgbd / MUL << endl;
+                    //cout << "AtA_rgbd_ori " << AtA_rgbd_ori << endl;
+                    //cout << "AtB_rgbd_ori " << AtB_rgbd_ori << endl;
+                    //exit(1);
+                    AtA += AtA_rgbd / MUL;
+                    AtB += AtB_rgbd / MUL;
                 }
 
                 if(corresps_icp.rows >= minCorrespsCount)
                 {
-                    Mat AtA_icp_ori, AtB_icp_ori;
+                    //Mat AtA_icp_ori, AtB_icp_ori;
                     //calcICPLsmMatrices_ori(srcFrame->cloud_ori, resultRt,
                     //                       dstFrame->cloud_ori, dstFrame->normals_ori,
                     //                       corresps_icp, AtA_icp_ori, AtB_icp_ori, icpEquationFuncPtr, transformDim);
@@ -1124,12 +1324,25 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                //cout << "corresps " << corresps_feature.size() << endl;
                //exit(1);
 
-               Mat AtA_feature, AtB_feature;
-               calcFeatureLsmMatrices(srcFrame->cloud_ori, resultRt,
-                                     corresps_feature, fx, fy, cx, cy,
-                                     AtA_feature, AtB_feature, featureXEquationFuncPtr, featureYEquationFuncPtr, transformDim);
-               AtA += AtA_feature;
-               AtB += AtB_feature;
+               Mat AtA_feature_ori, AtB_feature_ori;
+               calcFeatureLsmMatrices_ori(srcFrame->cloud_ori, resultRt,
+                                          corresps_feature, fx, fy, cx, cy,
+                                          AtA_feature_ori, AtB_feature_ori, featureXEquationFuncPtr, featureYEquationFuncPtr, transformDim);
+               //Mat AtA_feature, AtB_feature;
+               //calcFeatureLsmMatrices(srcFrame->cloud, resultRt,
+               //                      corresps_feature, fx, fy, cx, cy,
+               //                      AtA_feature, AtB_feature, featureXEquationFuncPtr, featureYEquationFuncPtr, transformDim);
+
+               //cout << "resultRt " << resultRt << endl;
+               //cout << "AtA_feature " << AtA_feature / MUL << endl;
+               //cout << "AtB_feature " << AtB_feature / MUL << endl;
+               //cout << "AtA_feature_ori " << AtA_feature_ori << endl;
+               //cout << "AtB_feature_ori " << AtB_feature_ori << endl;
+               //exit(1);
+               AtA += AtA_feature_ori;
+               AtB += AtB_feature_ori;
+               //AtA += AtA_feature / MUL;
+               //AtB += AtB_feature / MUL;
                //cout << "AtA " << AtA << endl;
                //cout << "AtB " << AtB << endl;
                //cout << "cloud " << srcFrame->cloud << endl;
@@ -1142,10 +1355,12 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
             if(!solutionExist)
                 break;
 
+            //cout << "ksi " << ksi << endl;
             computeProjectiveMatrix(ksi, currRt);
             resultRt = currRt * resultRt;
             isOk = true;
         }
+        //exit(1);
     }
 
     //cout << "v_max" << v_max << endl;
