@@ -370,7 +370,7 @@ void checkNormals(const Mat& normals, const Size& depthSize)
 }
 
 static
-int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
+int computeCorresps_ori(const Mat& K, const Mat& K_inv, const Mat& Rt,
                      const Mat& depth0, const Mat& validMask0,
                      const Mat& depth1, const Mat& selectMask1, double maxDepthDiff,
                      Mat& _corresps)
@@ -385,6 +385,128 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
     Mat Kt = Rt(Rect(3,0,1,3)).clone();
     Kt = K * Kt;
     const double * Kt_ptr = Kt.ptr<const double>();
+
+    AutoBuffer<double> buf(3 * (depth1.cols + depth1.rows));
+    double *KRK_inv0_u1 = buf;
+    double *KRK_inv1_v1_plus_KRK_inv2 = KRK_inv0_u1 + depth1.cols;
+    double *KRK_inv3_u1 = KRK_inv1_v1_plus_KRK_inv2 + depth1.rows;
+    double *KRK_inv4_v1_plus_KRK_inv5 = KRK_inv3_u1 + depth1.cols;
+    double *KRK_inv6_u1 = KRK_inv4_v1_plus_KRK_inv5 + depth1.rows;
+    double *KRK_inv7_v1_plus_KRK_inv8 = KRK_inv6_u1 + depth1.cols;
+    {
+        Mat R = Rt(Rect(0,0,3,3)).clone();
+
+        Mat KRK_inv = K * R * K_inv;
+        const double * KRK_inv_ptr = KRK_inv.ptr<const double>();
+        for(int u1 = 0; u1 < depth1.cols; u1++)
+        {
+            KRK_inv0_u1[u1] = (double)(KRK_inv_ptr[0] * u1);
+            KRK_inv3_u1[u1] = (double)(KRK_inv_ptr[3] * u1);
+            KRK_inv6_u1[u1] = (double)(KRK_inv_ptr[6] * u1);
+        }
+
+        for(int v1 = 0; v1 < depth1.rows; v1++)
+        {
+            KRK_inv1_v1_plus_KRK_inv2[v1] = (double)(KRK_inv_ptr[1] * v1 + KRK_inv_ptr[2]);
+            KRK_inv4_v1_plus_KRK_inv5[v1] = (double)(KRK_inv_ptr[4] * v1 + KRK_inv_ptr[5]);
+            KRK_inv7_v1_plus_KRK_inv8[v1] = (double)(KRK_inv_ptr[7] * v1 + KRK_inv_ptr[8]);
+        }
+    }
+
+    int correspCount = 0;
+    for(int v1 = 0; v1 < depth1.rows; v1++)
+    {
+        const double *depth1_row = depth1.ptr<double>(v1);
+        const uchar *mask1_row = selectMask1.ptr<uchar>(v1);
+        for(int u1 = 0; u1 < depth1.cols; u1++)
+        {
+            double d1 = depth1_row[u1];
+            if(mask1_row[u1])
+            {
+                CV_DbgAssert(!cvIsNaN(d1));
+                double transformed_d1 = static_cast<double>(d1 * (KRK_inv6_u1[u1] + KRK_inv7_v1_plus_KRK_inv8[v1]) +
+                                                          Kt_ptr[2]);
+                if(transformed_d1 > 0)
+                {
+                    double transformed_d1_inv = 1.0 / transformed_d1;
+                    int u0 = cvRound(transformed_d1_inv * (d1 * (KRK_inv0_u1[u1] + KRK_inv1_v1_plus_KRK_inv2[v1]) +
+                                                           Kt_ptr[0]));
+                    int v0 = cvRound(transformed_d1_inv * (d1 * (KRK_inv3_u1[u1] + KRK_inv4_v1_plus_KRK_inv5[v1]) +
+                                                           Kt_ptr[1]));
+
+                    if(r.contains(Point(u0,v0)))
+                    {
+                        double d0 = depth0.at<double>(v0,u0);
+                        if(validMask0.at<uchar>(v0, u0) && std::abs(transformed_d1 - d0) <= maxDepthDiff && std::abs(v1 - v0) <= maxLineDiff)
+                        {
+                            CV_DbgAssert(!cvIsNaN(d0));
+                            Vec2s& c = corresps.at<Vec2s>(v0,u0);
+                            if(c[0] != -1)
+                            {
+                                int exist_u1 = c[0], exist_v1 = c[1];
+
+                                double exist_d1 = (double)(depth1.at<double>(exist_v1,exist_u1) *
+                                    (KRK_inv6_u1[exist_u1] + KRK_inv7_v1_plus_KRK_inv8[exist_v1]) + Kt_ptr[2]);
+
+                                if(transformed_d1 > exist_d1)
+                                    continue;
+                            }
+                            else
+                                correspCount++;
+
+                            c = Vec2s((short)u1, (short)v1);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    int v_max_corr = 0;
+    _corresps.create(correspCount, 1, CV_32SC4);
+    Vec4i * corresps_ptr = _corresps.ptr<Vec4i>();
+    for(int v0 = 0, i = 0; v0 < corresps.rows; v0++)
+    {
+        const Vec2s* corresps_row = corresps.ptr<Vec2s>(v0);
+        for(int u0 = 0; u0 < corresps.cols; u0++)
+        {
+            const Vec2s& c = corresps_row[u0];
+            if(c[0] != -1)
+            {
+                //corresps_ptr[i++] = Vec4i(u0,v0,c[0],c[1]);
+                corresps_ptr[i++] = Vec4i(c[0],c[1],u0,v0);
+                int v_diff = abs(v0-c[1]);
+                if(v_diff > v_max_corr)
+                    v_max_corr = v_diff;
+            }
+        }
+    }
+    return v_max_corr;
+}
+
+static
+int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
+                     const Mat& depth0, const Mat& validMask0,
+                     const Mat& depth1, const Mat& selectMask1, double maxDepthDiff,
+                     Mat& _corresps)
+{
+    CV_Assert(K.type() == CV_64FC1);
+    CV_Assert(K_inv.type() == CV_64FC1);
+    CV_Assert(Rt.type() == CV_64FC1);
+
+    Mat corresps(depth1.size(), CV_16SC2, Scalar::all(-1));
+
+    Rect r(0, 0, depth1.cols, depth1.rows);
+    Mat Kt = Rt(Rect(3,0,1,3)).clone();
+    //Kt = K * Kt;
+    double * Kt_ptr = Kt.ptr<double>();
+    double fx = K.at<double>(0, 0);
+    double fy = K.at<double>(1, 1);
+    double cx = K.at<double>(0, 2);
+    double cy = K.at<double>(1, 2);
+    Kt_ptr[0] = trunc(Kt_ptr[0] * fx * MUL) + trunc(Kt_ptr[2] * cx * MUL);
+    Kt_ptr[1] = trunc(Kt_ptr[1] * fy * MUL) + trunc(Kt_ptr[2] * cy * MUL);
+    Kt_ptr[2] = trunc(Kt_ptr[2] * MUL);
 
     AutoBuffer<double> buf(3 * (depth1.cols + depth1.rows));
     double *KRK_inv0_u1 = buf;
@@ -1180,14 +1302,73 @@ void computeProjectiveMatrix(const Mat& ksi, Mat& Rt)
     //       because it gives less accurate pose of the camera
     Rt = Mat::eye(4, 4, CV_64FC1);
 
-    Mat R = Rt(Rect(0,0,3,3));
+    //Mat R = Rt(Rect(0,0,3,3));
     Mat rvec = ksi.rowRange(0,3);
 
-    Rodrigues(rvec, R);
+    //Rodrigues(rvec, R);
 
     Rt.at<double>(0,3) = ksi.at<double>(3);
     Rt.at<double>(1,3) = ksi.at<double>(4);
     Rt.at<double>(2,3) = ksi.at<double>(5);
+
+    Mat rvec_fix = rvec.clone();
+    Point3d r;
+    r.x = rvec_fix.at<double>(0);
+    r.y = rvec_fix.at<double>(1);
+    r.z = rvec_fix.at<double>(2);
+    double theta = norm(r);
+
+    //CORDIC
+    vector<double> atan_table;
+    for(int k = 0; k < 21; k++)
+        //atan_table.push_back(atan(pow(2.0,(-1.0*k)))*180/M_PI); 
+        atan_table.push_back(atan(pow(2.0,(-1.0*k)))); 
+    double An = sqrt(2.0);
+    for(int k = 1; k < 20; k++)
+        An *= sqrt(1 + pow(2.0, (-2.0*k)));        
+    double x = 1.0/An;
+    double y = 0.0;
+    double z = theta;
+    double d;
+    for(int k = 0; k < 21; k++)
+    {
+        if(z<=0)
+            d = -1;
+        else
+            d = 1;
+        double tmp_x = x - (y * d * pow(2.0, (-1.0*k)));
+        double tmp_y = y + (x * d * pow(2.0, (-1.0*k)));
+        x = tmp_x;
+        y = tmp_y;
+        z = z -(d * atan_table[k]);
+    }
+    double c = x;
+    double s = y;
+
+    double c1 = 1. - c;
+    double itheta = theta ? 1./theta : 0.;
+    
+    r *= itheta;
+    
+    Matx33d rrt( r.x*r.x, r.x*r.y, r.x*r.z, r.x*r.y, r.y*r.y, r.y*r.z, r.x*r.z, r.y*r.z, r.z*r.z );
+    Matx33d r_x(    0, -r.z,  r.y,
+                  r.z,    0, -r.x,
+                 -r.y,  r.x,    0 );
+    // R = cos(theta)*I + (1 - cos(theta))*r*rT + sin(theta)*[r_x]
+    Matx33d R_fix = c*Matx33d::eye() + c1*rrt + s*r_x;
+    Rt.at<double>(0,0) = R_fix(0,0);
+    Rt.at<double>(1,0) = R_fix(1,0);
+    Rt.at<double>(2,0) = R_fix(2,0);
+    Rt.at<double>(0,1) = R_fix(0,1);
+    Rt.at<double>(1,1) = R_fix(1,1);
+    Rt.at<double>(2,1) = R_fix(2,1);
+    Rt.at<double>(0,2) = R_fix(0,2);
+    Rt.at<double>(1,2) = R_fix(1,2);
+    Rt.at<double>(2,2) = R_fix(2,2);
+    //cout << "R_fix: " << R_fix <<endl;
+    //cout << "Rt: " << Rt <<endl;
+    //exit(1);
+
 #endif
 }
 
@@ -1320,15 +1501,21 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
             if(iter>=feature_iter_num){
                 Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
 
-                int v_rgbd = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, 
+                Mat corresps_rgbd_ori, corresps_icp_ori;
+                //int v_rgbd_ori = computeCorresps_ori(levelCameraMatrix, levelCameraMatrix_inv, 
+                //                             //resultRt_inv, srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskText,
+                //                             resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskText,
+                //                             maxDepthDiff, corresps_rgbd);
+                int v_rgbd = computeCorresps_ori(levelCameraMatrix, levelCameraMatrix_inv, 
                                              //resultRt_inv, srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskText,
                                              resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskText,
                                              maxDepthDiff, corresps_rgbd);
                 if (v_rgbd > v_max)
                     v_max = v_rgbd;
-                //cout << "v_rgbd" << v_rgbd << endl;
+                //cout << "v_rgbd_ori: " << v_rgbd_ori << endl;
+                //cout << "v_rgbd: " << v_rgbd << endl;
                 //exit(1);
-                int v_icp = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, 
+                int v_icp = computeCorresps_ori(levelCameraMatrix, levelCameraMatrix_inv, 
                                             //resultRt_inv, srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskNormal,
                                             resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskDepth,
                                             maxDepthDiff, corresps_icp);
