@@ -2,6 +2,7 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
 #include <iostream>
+#include <math.h>
 
 #include "vo.hpp"
 
@@ -1020,15 +1021,127 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
 static
 bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
 {
-    double det = determinant(AtA);
+    //double det = determinant(AtA);
 
-    if(fabs (det) < detThreshold || cvIsNaN(det) || cvIsInf(det))
-        return false;
+    //if(fabs (det) < detThreshold || cvIsNaN(det) || cvIsInf(det))
+    //    return false;
 
-    solve(AtA, AtB, x, DECOMP_CHOLESKY);
+    //solve(AtA, AtB, x, DECOMP_CHOLESKY);
     //cout << "AtA " << AtA << endl;
     //cout << "AtB " << AtB << endl;
     //cout << "x " << x << endl;
+    //exit(1);
+    int rows = AtA.rows;
+    int cols = AtA.cols;
+    Mat A = AtA.clone();
+    Mat B = AtB.clone();
+
+    for(int k = 0; k < rows; k++)
+    {
+        for(int m = 0; m < k; m++) //dkk = akk - lkm * lkm * dmm  = akk - lkm * umk 
+        {
+            //A.at<double>(k, k) = A.at<double>(k, k) - (A.at<double>(k, m) * A.at<double>(m, k));
+            A.at<double>(k, k) = A.at<double>(k, k) - trunc((A.at<double>(k, m) * A.at<double>(m, k)) / MUL);
+        }
+ 
+        for(int i = k+1; i < cols; i++)
+        {
+            for(int m = 0; m < k; m++) //uki = aki - lkm * umi
+            {
+                 //A.at<double>(k, i) = A.at<double>(k, i) - (A.at<double>(m, i) * A.at<double>(k, m));
+                 A.at<double>(k, i) = A.at<double>(k, i) - trunc((A.at<double>(m, i) * A.at<double>(k, m)) / MUL);
+            }
+            if(fabs(A.at<double>(k, k)) <= DBL_EPSILON)
+                return false;
+                //cout << "===========DIV 0===================== " << A.at<double>(k, k) << endl;
+         
+            //lik = uki / dkk 
+            //A.at<double>(i, k) = A.at<double>(k, i) / A.at<double>(k, k);
+            A.at<double>(i, k) = trunc(A.at<double>(k, i) * MUL / A.at<double>(k, k));
+        }
+    }
+
+    for(int i = 0; i < rows; i++)
+    {
+        for(int k = 0; k < i; k++)
+        {
+            //B.at<double>(i, 0) = B.at<double>(i, 0) - (A.at<double>(i, k) * B.at<double>(k, 0));
+            B.at<double>(i, 0) = B.at<double>(i, 0) - trunc((A.at<double>(i, k) * B.at<double>(k, 0)) / MUL);
+        }
+    }
+
+    for(int i = rows-1; i >= 0; i--)
+    {
+        if(fabs(A.at<double>(i, i)) <= DBL_EPSILON)
+            return false;
+            //cout << "===========DIV 0===================== " << A.at<double>(i, i) << endl;
+        //B.at<double>(i, 0) = B.at<double>(i, 0) / A.at<double>(i, i);
+        B.at<double>(i, 0) = trunc(B.at<double>(i, 0) * MUL / A.at<double>(i, i));
+        for(int k = i+1; k < rows; k++)
+        {
+            //B.at<double>(i, 0) = B.at<double>(i, 0) - (A.at<double>(k, i) * B.at<double>(k, 0));
+            B.at<double>(i, 0) = B.at<double>(i, 0) - trunc((A.at<double>(k, i) * B.at<double>(k, 0)) / MUL);
+        }
+    }
+
+    //Mat L (rows, cols, CV_64FC1, Scalar::all(0));
+    //Mat U (rows, cols, CV_64FC1, Scalar::all(0));
+    //L.at<double>(0, 0) = 1.0;
+    //L.at<double>(1, 0) = A.at<double>(1, 0);
+    //L.at<double>(2, 0) = A.at<double>(2, 0);
+    //L.at<double>(3, 0) = A.at<double>(3, 0);
+    //L.at<double>(4, 0) = A.at<double>(4, 0);
+    //L.at<double>(5, 0) = A.at<double>(5, 0);
+    //L.at<double>(1, 1) = 1.0;
+    //L.at<double>(2, 1) = A.at<double>(2, 1);
+    //L.at<double>(3, 1) = A.at<double>(3, 1);
+    //L.at<double>(4, 1) = A.at<double>(4, 1);
+    //L.at<double>(5, 1) = A.at<double>(5, 1);
+    //L.at<double>(2, 2) = 1.0;
+    //L.at<double>(3, 2) = A.at<double>(3, 2);
+    //L.at<double>(4, 2) = A.at<double>(4, 2);
+    //L.at<double>(5, 2) = A.at<double>(5, 2);
+    //L.at<double>(3, 3) = 1.0;
+    //L.at<double>(4, 3) = A.at<double>(4, 3);
+    //L.at<double>(5, 3) = A.at<double>(5, 3);
+    //L.at<double>(4, 4) = 1.0;
+    //L.at<double>(5, 4) = A.at<double>(5, 4);
+    //L.at<double>(5, 5) = 1.0;
+    //U.at<double>(0, 0) = A.at<double>(0, 0);
+    //U.at<double>(0, 1) = A.at<double>(0, 1);
+    //U.at<double>(0, 2) = A.at<double>(0, 2);
+    //U.at<double>(0, 3) = A.at<double>(0, 3);
+    //U.at<double>(0, 4) = A.at<double>(0, 4);
+    //U.at<double>(0, 5) = A.at<double>(0, 5);
+    //U.at<double>(1, 1) = A.at<double>(1, 1);
+    //U.at<double>(1, 2) = A.at<double>(1, 2);
+    //U.at<double>(1, 3) = A.at<double>(1, 3);
+    //U.at<double>(1, 4) = A.at<double>(1, 4);
+    //U.at<double>(1, 5) = A.at<double>(1, 5);
+    //U.at<double>(2, 2) = A.at<double>(2, 2);
+    //U.at<double>(2, 3) = A.at<double>(2, 3);
+    //U.at<double>(2, 4) = A.at<double>(2, 4);
+    //U.at<double>(2, 5) = A.at<double>(2, 5);
+    //U.at<double>(3, 3) = A.at<double>(3, 3);
+    //U.at<double>(3, 4) = A.at<double>(3, 4);
+    //U.at<double>(3, 5) = A.at<double>(3, 5);
+    //U.at<double>(4, 4) = A.at<double>(4, 4);
+    //U.at<double>(4, 5) = A.at<double>(4, 5);
+    //U.at<double>(5, 5) = A.at<double>(5, 5);
+    //cout << "A " << A << endl;
+    //cout << "L " << L << endl;
+    //cout << "U " << U << endl;
+    //cout << "L*U " << L*U << endl;
+    //cout << "B " << B << endl;
+    //exit(1);
+    x = B;
+    for(int i = 0; i < rows; i++)
+    {
+            x.at<double>(i, 0) = x.at<double>(i, 0) / MUL;
+    }
+    //cout << "x " << x << endl;
+    //cout << "A*x " << AtA*x << endl;
+    //cout << "B " << AtB << endl;
     //exit(1);
 
     return true;
@@ -1241,8 +1354,10 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                     //cout << "AtA_rgbd_ori " << AtA_rgbd_ori << endl;
                     //cout << "AtB_rgbd_ori " << AtB_rgbd_ori << endl;
                     //exit(1);
-                    AtA += AtA_rgbd / MUL;
-                    AtB += AtB_rgbd / MUL;
+                    //AtA += AtA_rgbd / MUL;
+                    //AtB += AtB_rgbd / MUL;
+                    AtA += AtA_rgbd;
+                    AtB += AtB_rgbd;
                 }
 
                 if(corresps_icp.rows >= minCorrespsCount)
@@ -1259,8 +1374,10 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                     //cout << "AtA_icp_ori " << AtA_icp_ori << endl;
                     //cout << "AtB_icp_ori " << AtB_icp_ori << endl;
                     //exit(1);
-                    AtA += AtA_icp / MUL;
-                    AtB += AtB_icp / MUL;
+                    //AtA += AtA_icp / MUL;
+                    //AtB += AtB_icp / MUL;
+                    AtA += AtA_icp;
+                    AtB += AtB_icp;
                 }
             }
             else 
@@ -1324,14 +1441,14 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                //cout << "corresps " << corresps_feature.size() << endl;
                //exit(1);
 
-               Mat AtA_feature_ori, AtB_feature_ori;
-               calcFeatureLsmMatrices_ori(srcFrame->cloud_ori, resultRt,
-                                          corresps_feature, fx, fy, cx, cy,
-                                          AtA_feature_ori, AtB_feature_ori, featureXEquationFuncPtr, featureYEquationFuncPtr, transformDim);
-               //Mat AtA_feature, AtB_feature;
-               //calcFeatureLsmMatrices(srcFrame->cloud, resultRt,
-               //                      corresps_feature, fx, fy, cx, cy,
-               //                      AtA_feature, AtB_feature, featureXEquationFuncPtr, featureYEquationFuncPtr, transformDim);
+               //Mat AtA_feature_ori, AtB_feature_ori;
+               //calcFeatureLsmMatrices_ori(srcFrame->cloud_ori, resultRt,
+               //                           corresps_feature, fx, fy, cx, cy,
+               //                           AtA_feature_ori, AtB_feature_ori, featureXEquationFuncPtr, featureYEquationFuncPtr, transformDim);
+               Mat AtA_feature, AtB_feature;
+               calcFeatureLsmMatrices(srcFrame->cloud, resultRt,
+                                     corresps_feature, fx, fy, cx, cy,
+                                     AtA_feature, AtB_feature, featureXEquationFuncPtr, featureYEquationFuncPtr, transformDim);
 
                //cout << "resultRt " << resultRt << endl;
                //cout << "AtA_feature " << AtA_feature / MUL << endl;
@@ -1339,10 +1456,12 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                //cout << "AtA_feature_ori " << AtA_feature_ori << endl;
                //cout << "AtB_feature_ori " << AtB_feature_ori << endl;
                //exit(1);
-               AtA += AtA_feature_ori;
-               AtB += AtB_feature_ori;
+               //AtA += AtA_feature_ori;
+               //AtB += AtB_feature_ori;
                //AtA += AtA_feature / MUL;
                //AtB += AtB_feature / MUL;
+               AtA += AtA_feature;
+               AtB += AtB_feature;
                //cout << "AtA " << AtA << endl;
                //cout << "AtB " << AtB << endl;
                //cout << "cloud " << srcFrame->cloud << endl;

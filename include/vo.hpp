@@ -4,7 +4,10 @@
 #include <opencv2/core/utility.hpp>
 
 //#define MUL 65536.0  //  2^16
-#define MUL 1048576.0  //  2^20
+//#define MUL 1048576.0  //  2^20
+//#define MUL 4294967296.0  //  2^32
+#define MUL 1099511627776.0  //  2^40
+//#define MUL 18446744073709551616.0  //  2^64
 
 using namespace cv;
   /** Object that contains a frame data.
