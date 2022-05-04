@@ -500,13 +500,17 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
     Mat Kt = Rt(Rect(3,0,1,3)).clone();
     //Kt = K * Kt;
     double * Kt_ptr = Kt.ptr<double>();
-    double fx = K.at<double>(0, 0);
-    double fy = K.at<double>(1, 1);
-    double cx = K.at<double>(0, 2);
-    double cy = K.at<double>(1, 2);
-    Kt_ptr[0] = trunc(Kt_ptr[0] * fx * MUL) + trunc(Kt_ptr[2] * cx * MUL);
-    Kt_ptr[1] = trunc(Kt_ptr[1] * fy * MUL) + trunc(Kt_ptr[2] * cy * MUL);
+    double fx = trunc(K.at<double>(0, 0) * MUL);
+    double fy = trunc(K.at<double>(1, 1) * MUL);
+    double cx = trunc(K.at<double>(0, 2) * MUL);
+    double cy = trunc(K.at<double>(1, 2) * MUL);
+    Kt_ptr[0] = trunc(Kt_ptr[0] * fx) + trunc(Kt_ptr[2] * cx);
+    Kt_ptr[1] = trunc(Kt_ptr[1] * fy) + trunc(Kt_ptr[2] * cy);
     Kt_ptr[2] = trunc(Kt_ptr[2] * MUL);
+    double fx_inv = trunc(MUL * MUL / fx);
+    double fy_inv = trunc(MUL * MUL / fy);
+    //double cx_inv = -cx / fx;
+    //double cy_inv = -cy / fy;
 
     AutoBuffer<double> buf(3 * (depth1.cols + depth1.rows));
     double *KRK_inv0_u1 = buf;
@@ -518,7 +522,33 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
     {
         Mat R = Rt(Rect(0,0,3,3)).clone();
 
-        Mat KRK_inv = K * R * K_inv;
+        //Mat KRK_inv = K * R * K_inv;
+        //Mat K_inv2 = Mat::eye(3, 3, CV_64FC1);
+        //K_inv2.at<double>(0,0) = fx_inv; 
+        //K_inv2.at<double>(1,1) = fy_inv; 
+        //K_inv2.at<double>(0,2) = cx_inv; 
+        //K_inv2.at<double>(1,2) = cy_inv; 
+        //Mat KRK_inv2 = K * R * K_inv2;
+        Mat KRK_inv = Mat::eye(3, 3, CV_64FC1);
+        double r00 = trunc(R.at<double>(0,0) * MUL);
+        double r01 = trunc(R.at<double>(0,1) * MUL);
+        double r02 = trunc(R.at<double>(0,2) * MUL);
+        double r10 = trunc(R.at<double>(1,0) * MUL);
+        double r11 = trunc(R.at<double>(1,1) * MUL);
+        double r12 = trunc(R.at<double>(1,2) * MUL);
+        double r20 = trunc(R.at<double>(2,0) * MUL);
+        double r21 = trunc(R.at<double>(2,1) * MUL);
+        double r22 = trunc(R.at<double>(2,2) * MUL);
+        KRK_inv.at<double>(0,0) = r00 + trunc((r20 * cx * fx_inv / MUL) / MUL); 
+        KRK_inv.at<double>(0,1) = trunc((r01 * fx * fy_inv / MUL) / MUL) + trunc((r21 * cx * fy_inv / MUL) / MUL); 
+        KRK_inv.at<double>(0,2) = -trunc(r00 * cx / MUL) - trunc(((r01 * fx * cy * fy_inv / MUL) / MUL) / MUL) + trunc(r02 * fx / MUL) - trunc(((r20 * cx * cx * fx_inv / MUL) / MUL) / MUL) - trunc(((r21 * cx * cy * fy_inv / MUL) / MUL) / MUL) + trunc(r22 * cx / MUL); 
+        KRK_inv.at<double>(1,0) = trunc((r10 * fy * fx_inv / MUL) / MUL) + trunc((r20 * cy * fx_inv / MUL) / MUL); 
+        KRK_inv.at<double>(1,1) = r11 + trunc((r21 * cy * fy_inv / MUL) / MUL); 
+        KRK_inv.at<double>(1,2) = -trunc(((r10 * cx * fy * fx_inv / MUL) / MUL) / MUL) - trunc(r11 * cy / MUL) + trunc(r12 * fy / MUL) - trunc(((r20 * cx * cy * fx_inv / MUL) / MUL) / MUL) - trunc(((r21 * cy * cy * fy_inv / MUL) / MUL) / MUL) + trunc(r22 * cy / MUL) ; 
+        KRK_inv.at<double>(2,0) = trunc(r20 * fx_inv / MUL); 
+        KRK_inv.at<double>(2,1) = trunc(r21 * fy_inv / MUL); 
+        KRK_inv.at<double>(2,2) = - trunc((r20 * cx * fx_inv / MUL) / MUL) - trunc((r21 * cy * fy_inv / MUL) / MUL) + r22; 
+
         const double * KRK_inv_ptr = KRK_inv.ptr<const double>();
         for(int u1 = 0; u1 < depth1.cols; u1++)
         {
@@ -550,16 +580,14 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
                                                           Kt_ptr[2]);
                 if(transformed_d1 > 0)
                 {
-                    double transformed_d1_inv = 1.0 / transformed_d1;
-                    int u0 = cvRound(transformed_d1_inv * (d1 * (KRK_inv0_u1[u1] + KRK_inv1_v1_plus_KRK_inv2[v1]) +
-                                                           Kt_ptr[0]));
-                    int v0 = cvRound(transformed_d1_inv * (d1 * (KRK_inv3_u1[u1] + KRK_inv4_v1_plus_KRK_inv5[v1]) +
-                                                           Kt_ptr[1]));
+                    //double transformed_d1_inv = trunc(MUL * MUL / transformed_d1);
+                    int u0 = cvRound((d1 * (KRK_inv0_u1[u1] + KRK_inv1_v1_plus_KRK_inv2[v1]) + Kt_ptr[0]) / transformed_d1);
+                    int v0 = cvRound((d1 * (KRK_inv3_u1[u1] + KRK_inv4_v1_plus_KRK_inv5[v1]) + Kt_ptr[1]) / transformed_d1);
 
                     if(r.contains(Point(u0,v0)))
                     {
                         double d0 = depth0.at<double>(v0,u0);
-                        if(validMask0.at<uchar>(v0, u0) && std::abs(transformed_d1 - d0) <= maxDepthDiff && std::abs(v1 - v0) <= maxLineDiff)
+                        if(validMask0.at<uchar>(v0, u0) && std::abs(transformed_d1 - trunc(d0*MUL)) <= trunc(maxDepthDiff*MUL) && std::abs(v1 - v0) <= maxLineDiff)
                         {
                             CV_DbgAssert(!cvIsNaN(d0));
                             Vec2s& c = corresps.at<Vec2s>(v0,u0);
@@ -1501,12 +1529,12 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
             if(iter>=feature_iter_num){
                 Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
 
-                Mat corresps_rgbd_ori, corresps_icp_ori;
+                //Mat corresps_rgbd_ori, corresps_icp_ori;
                 //int v_rgbd_ori = computeCorresps_ori(levelCameraMatrix, levelCameraMatrix_inv, 
                 //                             //resultRt_inv, srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskText,
                 //                             resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskText,
-                //                             maxDepthDiff, corresps_rgbd);
-                int v_rgbd = computeCorresps_ori(levelCameraMatrix, levelCameraMatrix_inv, 
+                //                             maxDepthDiff, corresps_rgbd_ori);
+                int v_rgbd = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, 
                                              //resultRt_inv, srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskText,
                                              resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskText,
                                              maxDepthDiff, corresps_rgbd);
@@ -1514,8 +1542,10 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                     v_max = v_rgbd;
                 //cout << "v_rgbd_ori: " << v_rgbd_ori << endl;
                 //cout << "v_rgbd: " << v_rgbd << endl;
+                //cout << "corr_ori: " << corresps_rgbd_ori.rows << endl;
+                //cout << "corr: " << corresps_rgbd.rows << endl;
                 //exit(1);
-                int v_icp = computeCorresps_ori(levelCameraMatrix, levelCameraMatrix_inv, 
+                int v_icp = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, 
                                             //resultRt_inv, srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskNormal,
                                             resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskDepth,
                                             maxDepthDiff, corresps_icp);
