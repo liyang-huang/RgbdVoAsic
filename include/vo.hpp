@@ -25,8 +25,6 @@ using namespace cv;
       Mat image;
       Mat depth;
       Mat mask;
-      Mat normals_ori;
-      Mat cloud_ori;
       Mat normals;
       Mat cloud;
   };
@@ -59,7 +57,6 @@ using namespace cv;
     Mat maskDepth;
     Mat maskText;
     Mat maskNormal;
-    Mat maskNormal_ori;
   };
 
   class Odometry
