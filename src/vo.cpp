@@ -305,9 +305,9 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
     double fy = trunc(K.at<double>(1, 1) * MUL);
     double cx = trunc(K.at<double>(0, 2) * MUL);
     double cy = trunc(K.at<double>(1, 2) * MUL);
-    Kt_ptr[0] = trunc(Kt_ptr[0] * fx) + trunc(Kt_ptr[2] * cx);
-    Kt_ptr[1] = trunc(Kt_ptr[1] * fy) + trunc(Kt_ptr[2] * cy);
-    Kt_ptr[2] = trunc(Kt_ptr[2] * MUL);
+    Kt_ptr[0] = trunc(Kt_ptr[0] * fx / MUL) + trunc(Kt_ptr[2] * cx / MUL);
+    Kt_ptr[1] = trunc(Kt_ptr[1] * fy / MUL) + trunc(Kt_ptr[2] * cy / MUL);
+    Kt_ptr[2] = Kt_ptr[2];
     double fx_inv = trunc(MUL * MUL / fx);
     double fy_inv = trunc(MUL * MUL / fy);
     //double cx_inv = -cx / fx;
@@ -331,15 +331,15 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
         //K_inv2.at<double>(1,2) = cy_inv; 
         //Mat KRK_inv2 = K * R * K_inv2;
         Mat KRK_inv = Mat::eye(3, 3, CV_64FC1);
-        double r00 = trunc(R.at<double>(0,0) * MUL);
-        double r01 = trunc(R.at<double>(0,1) * MUL);
-        double r02 = trunc(R.at<double>(0,2) * MUL);
-        double r10 = trunc(R.at<double>(1,0) * MUL);
-        double r11 = trunc(R.at<double>(1,1) * MUL);
-        double r12 = trunc(R.at<double>(1,2) * MUL);
-        double r20 = trunc(R.at<double>(2,0) * MUL);
-        double r21 = trunc(R.at<double>(2,1) * MUL);
-        double r22 = trunc(R.at<double>(2,2) * MUL);
+        double r00 = R.at<double>(0,0);
+        double r01 = R.at<double>(0,1);
+        double r02 = R.at<double>(0,2);
+        double r10 = R.at<double>(1,0);
+        double r11 = R.at<double>(1,1);
+        double r12 = R.at<double>(1,2);
+        double r20 = R.at<double>(2,0);
+        double r21 = R.at<double>(2,1);
+        double r22 = R.at<double>(2,2);
         KRK_inv.at<double>(0,0) = r00 + trunc((r20 * cx * fx_inv / MUL) / MUL); 
         KRK_inv.at<double>(0,1) = trunc((r01 * fx * fy_inv / MUL) / MUL) + trunc((r21 * cx * fy_inv / MUL) / MUL); 
         KRK_inv.at<double>(0,2) = -trunc(r00 * cx / MUL) - trunc(((r01 * fx * cy * fy_inv / MUL) / MUL) / MUL) + trunc(r02 * fx / MUL) - trunc(((r20 * cx * cx * fx_inv / MUL) / MUL) / MUL) - trunc(((r21 * cx * cy * fy_inv / MUL) / MUL) / MUL) + trunc(r22 * cx / MUL); 
@@ -501,9 +501,9 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
 
          const Point3d& p0 = cloud0.at<Point3d>(v0,u0);
          Point3d tp0;
-         tp0.x = trunc(p0.x * trunc(Rt_ptr[0] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[1] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[2]  * MUL) / MUL) + trunc(Rt_ptr[3]  * MUL);
-         tp0.y = trunc(p0.x * trunc(Rt_ptr[4] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[5] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[6]  * MUL) / MUL) + trunc(Rt_ptr[7]  * MUL);
-         tp0.z = trunc(p0.x * trunc(Rt_ptr[8] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[9] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[10] * MUL) / MUL) + trunc(Rt_ptr[11] * MUL);
+         tp0.x = trunc(p0.x * Rt_ptr[0] / MUL) + trunc(p0.y * Rt_ptr[1] / MUL) + trunc(p0.z * Rt_ptr[2]  / MUL) + Rt_ptr[3] ;
+         tp0.y = trunc(p0.x * Rt_ptr[4] / MUL) + trunc(p0.y * Rt_ptr[5] / MUL) + trunc(p0.z * Rt_ptr[6]  / MUL) + Rt_ptr[7] ;
+         tp0.z = trunc(p0.x * Rt_ptr[8] / MUL) + trunc(p0.y * Rt_ptr[9] / MUL) + trunc(p0.z * Rt_ptr[10] / MUL) + Rt_ptr[11];
 
          //func(A_ptr,
          //     w_sobelScale * dI_dx1.at<short int>(v1,u1),
@@ -569,9 +569,9 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
 
         const Point3d& p0 = cloud0.at<Point3d>(v0,u0);
         Point3d tp0;
-        tp0.x = trunc(p0.x * trunc(Rt_ptr[0] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[1] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[2]  * MUL) / MUL) + trunc(Rt_ptr[3]  * MUL);
-        tp0.y = trunc(p0.x * trunc(Rt_ptr[4] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[5] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[6]  * MUL) / MUL) + trunc(Rt_ptr[7]  * MUL);
-        tp0.z = trunc(p0.x * trunc(Rt_ptr[8] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[9] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[10] * MUL) / MUL) + trunc(Rt_ptr[11] * MUL);
+        tp0.x = trunc(p0.x * Rt_ptr[0] / MUL) + trunc(p0.y * Rt_ptr[1] / MUL) + trunc(p0.z * Rt_ptr[2]  / MUL) + Rt_ptr[3] ;
+        tp0.y = trunc(p0.x * Rt_ptr[4] / MUL) + trunc(p0.y * Rt_ptr[5] / MUL) + trunc(p0.z * Rt_ptr[6]  / MUL) + Rt_ptr[7] ;
+        tp0.z = trunc(p0.x * Rt_ptr[8] / MUL) + trunc(p0.y * Rt_ptr[9] / MUL) + trunc(p0.z * Rt_ptr[10] / MUL) + Rt_ptr[11];
 
         Vec3d n1 = normals1.at<Vec3d>(v1, u1);
         Point3d v = cloud1.at<Point3d>(v1,u1) - tp0; //MUL
@@ -651,9 +651,9 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
     
         const Point3d& p0 = cloud0.at<Point3d>(v0,u0);
         Point3d tp0;
-        tp0.x = trunc(p0.x * trunc(Rt_ptr[0] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[1] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[2]  * MUL) / MUL) + trunc(Rt_ptr[3]  * MUL);
-        tp0.y = trunc(p0.x * trunc(Rt_ptr[4] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[5] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[6]  * MUL) / MUL) + trunc(Rt_ptr[7]  * MUL);
-        tp0.z = trunc(p0.x * trunc(Rt_ptr[8] * MUL) / MUL) + trunc(p0.y * trunc(Rt_ptr[9] * MUL) / MUL) + trunc(p0.z * trunc(Rt_ptr[10] * MUL) / MUL) + trunc(Rt_ptr[11] * MUL);
+        tp0.x = trunc(p0.x * Rt_ptr[0] / MUL) + trunc(p0.y * Rt_ptr[1] / MUL) + trunc(p0.z * Rt_ptr[2]  / MUL) + Rt_ptr[3] ;
+        tp0.y = trunc(p0.x * Rt_ptr[4] / MUL) + trunc(p0.y * Rt_ptr[5] / MUL) + trunc(p0.z * Rt_ptr[6]  / MUL) + Rt_ptr[7] ;
+        tp0.z = trunc(p0.x * Rt_ptr[8] / MUL) + trunc(p0.y * Rt_ptr[9] / MUL) + trunc(p0.z * Rt_ptr[10] / MUL) + Rt_ptr[11];
         int p2d_x = cvRound( (trunc(trunc(fx * MUL) * tp0.x / tp0.z) + trunc(cx * MUL)) / MUL);
         int p2d_y = cvRound( (trunc(trunc(fy * MUL) * tp0.y / tp0.z) + trunc(cy * MUL)) / MUL);
 
@@ -831,10 +831,10 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
     //cout << "B " << B << endl;
     //exit(1);
     x = B;
-    for(int i = 0; i < rows; i++)
-    {
-            x.at<double>(i, 0) = x.at<double>(i, 0) / MUL;
-    }
+    //for(int i = 0; i < rows; i++)
+    //{
+    //        x.at<double>(i, 0) = x.at<double>(i, 0) / MUL;
+    //}
     //cout << "x " << x << endl;
     //cout << "A*x " << AtA*x << endl;
     //cout << "B " << AtB << endl;
@@ -875,6 +875,7 @@ void computeProjectiveMatrix(const Mat& ksi, Mat& Rt)
     // TODO: check computeProjectiveMatrix when there is not eigen library,
     //       because it gives less accurate pose of the camera
     Rt = Mat::eye(4, 4, CV_64FC1);
+    Rt = Rt * MUL;
 
     //Mat R = Rt(Rect(0,0,3,3));
     Mat rvec = ksi.rowRange(0,3);
@@ -893,52 +894,79 @@ void computeProjectiveMatrix(const Mat& ksi, Mat& Rt)
     double theta = norm(r);
 
     //CORDIC
-    vector<double> atan_table;
-    for(int k = 0; k < 21; k++)
-        //atan_table.push_back(atan(pow(2.0,(-1.0*k)))*180/M_PI); 
-        atan_table.push_back(atan(pow(2.0,(-1.0*k)))); 
-    double An = sqrt(2.0);
-    for(int k = 1; k < 20; k++)
-        An *= sqrt(1 + pow(2.0, (-2.0*k)));        
-    double x = 1.0/An;
-    double y = 0.0;
-    double z = theta;
-    double d;
-    for(int k = 0; k < 21; k++)
-    {
-        if(z<=0)
-            d = -1;
-        else
-            d = 1;
-        double tmp_x = x - (y * d * pow(2.0, (-1.0*k)));
-        double tmp_y = y + (x * d * pow(2.0, (-1.0*k)));
-        x = tmp_x;
-        y = tmp_y;
-        z = z -(d * atan_table[k]);
-    }
-    double c = x;
-    double s = y;
+    //vector<double> atan_table;
+    //for(int k = 0; k < 21; k++)
+    //    //atan_table.push_back(atan(pow(2.0,(-1.0*k)))*180/M_PI); 
+    //    atan_table.push_back(atan(pow(2.0,(-1.0*k)))); 
+    //double An = sqrt(2.0);
+    //for(int k = 1; k < 20; k++)
+    //    An *= sqrt(1 + pow(2.0, (-2.0*k)));        
+    //double x = 1.0/An;
+    //double y = 0.0;
+    //double z = theta;
+    //double d;
+    //for(int k = 0; k < 21; k++)
+    //{
+    //    if(z<=0)
+    //        d = -1;
+    //    else
+    //        d = 1;
+    //    double tmp_x = x - (y * d * pow(2.0, (-1.0*k)));
+    //    double tmp_y = y + (x * d * pow(2.0, (-1.0*k)));
+    //    x = tmp_x;
+    //    y = tmp_y;
+    //    z = z -(d * atan_table[k]);
+    //}
+    //double c = x;
+    //double s = y;
+    double c = trunc(cos(theta/MUL) * MUL);
+    double s = trunc(sin(theta/MUL) * MUL);
+    //double c = cos(theta);
+    //double s = sin(theta);
 
-    double c1 = 1. - c;
-    double itheta = theta ? 1./theta : 0.;
+    double c1 = 1.*MUL - c;
+    //double c1 = 1. - c;
+    //double itheta = theta ? 1./theta : 0.;
     
-    r *= itheta;
+    //r *= itheta;
+    r.x = trunc(r.x * MUL / theta);
+    r.y = trunc(r.y * MUL / theta);
+    r.z = trunc(r.z * MUL / theta);
     
-    Matx33d rrt( r.x*r.x, r.x*r.y, r.x*r.z, r.x*r.y, r.y*r.y, r.y*r.z, r.x*r.z, r.y*r.z, r.z*r.z );
+    //Matx33d rrt( r.x*r.x, r.x*r.y, r.x*r.z, r.x*r.y, r.y*r.y, r.y*r.z, r.x*r.z, r.y*r.z, r.z*r.z );
+    Matx33d rrt( trunc(r.x*r.x/MUL), trunc(r.x*r.y/MUL), trunc(r.x*r.z/MUL),
+                 trunc(r.x*r.y/MUL), trunc(r.y*r.y/MUL), trunc(r.y*r.z/MUL), 
+                 trunc(r.x*r.z/MUL), trunc(r.y*r.z/MUL), trunc(r.z*r.z/MUL) );
     Matx33d r_x(    0, -r.z,  r.y,
                   r.z,    0, -r.x,
                  -r.y,  r.x,    0 );
     // R = cos(theta)*I + (1 - cos(theta))*r*rT + sin(theta)*[r_x]
-    Matx33d R_fix = c*Matx33d::eye() + c1*rrt + s*r_x;
-    Rt.at<double>(0,0) = R_fix(0,0);
-    Rt.at<double>(1,0) = R_fix(1,0);
-    Rt.at<double>(2,0) = R_fix(2,0);
-    Rt.at<double>(0,1) = R_fix(0,1);
-    Rt.at<double>(1,1) = R_fix(1,1);
-    Rt.at<double>(2,1) = R_fix(2,1);
-    Rt.at<double>(0,2) = R_fix(0,2);
-    Rt.at<double>(1,2) = R_fix(1,2);
-    Rt.at<double>(2,2) = R_fix(2,2);
+    //Matx33d R_fix = c*Matx33d::eye() + c1*rrt + s*r_x;
+    //Rt.at<double>(0,0) = R_fix(0,0);
+    //Rt.at<double>(1,0) = R_fix(1,0);
+    //Rt.at<double>(2,0) = R_fix(2,0);
+    //Rt.at<double>(0,1) = R_fix(0,1);
+    //Rt.at<double>(1,1) = R_fix(1,1);
+    //Rt.at<double>(2,1) = R_fix(2,1);
+    //Rt.at<double>(0,2) = R_fix(0,2);
+    //Rt.at<double>(1,2) = R_fix(1,2);
+    //Rt.at<double>(2,2) = R_fix(2,2);
+    Rt.at<double>(0,0) = c + trunc(c1*rrt(0,0)/MUL) + trunc(s*r_x(0,0)/MUL);
+    Rt.at<double>(1,0) = trunc(c1*rrt(1,0)/MUL) + trunc(s*r_x(1,0)/MUL);
+    Rt.at<double>(2,0) = trunc(c1*rrt(2,0)/MUL) + trunc(s*r_x(2,0)/MUL);
+    Rt.at<double>(0,1) = trunc(c1*rrt(0,1)/MUL) + trunc(s*r_x(0,1)/MUL);
+    Rt.at<double>(1,1) = c + trunc(c1*rrt(1,1)/MUL) + trunc(s*r_x(1,1)/MUL);
+    Rt.at<double>(2,1) = trunc(c1*rrt(2,1)/MUL) + trunc(s*r_x(2,1)/MUL);
+    Rt.at<double>(0,2) = trunc(c1*rrt(0,2)/MUL) + trunc(s*r_x(0,2)/MUL);
+    Rt.at<double>(1,2) = trunc(c1*rrt(1,2)/MUL) + trunc(s*r_x(1,2)/MUL);
+    Rt.at<double>(2,2) = c + trunc(c1*rrt(2,2)/MUL) + trunc(s*r_x(2,2)/MUL);
+    //for(int i = 0; i < Rt.rows; i++)
+    //{
+    //    for(int j = 0; j < Rt.cols; j++)
+    //    {
+    //        Rt.at<double>(i, j) = Rt.at<double>(i, j) / MUL;
+    //    }
+    //}
     //cout << "R_fix: " << R_fix <<endl;
     //cout << "Rt: " << Rt <<endl;
     //exit(1);
@@ -1047,7 +1075,7 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
 
     std::vector<Mat> pyramidCameraMatrix;
 
-    Mat resultRt = initRt.empty() ? Mat::eye(4,4,CV_64FC1) : initRt.clone();
+    Mat resultRt = initRt.empty() ? Mat::eye(4,4,CV_64FC1)*MUL : initRt.clone();
     Mat currRt, ksi;
 
     bool isOk = false;
@@ -1071,7 +1099,7 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
         {
             Mat AtA(transformDim, transformDim, CV_64FC1, Scalar(0)), AtB(transformDim, 1, CV_64FC1, Scalar(0));
             if(iter>=feature_iter_num){
-                Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
+                //Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
 
                 int v_rgbd = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, 
                                              //resultRt_inv, srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskText,
@@ -1189,7 +1217,39 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
 
             //cout << "ksi " << ksi << endl;
             computeProjectiveMatrix(ksi, currRt);
-            resultRt = currRt * resultRt;
+            //resultRt = currRt * resultRt;
+            resultRt.at<double>(0,0)=trunc(currRt.at<double>(0,0)*resultRt.at<double>(0,0)/MUL)+trunc(currRt.at<double>(0,1)*resultRt.at<double>(1,0)/MUL)+
+                                     trunc(currRt.at<double>(0,2)*resultRt.at<double>(2,0)/MUL)+trunc(currRt.at<double>(0,3)*resultRt.at<double>(3,0)/MUL); 
+            resultRt.at<double>(0,1)=trunc(currRt.at<double>(0,0)*resultRt.at<double>(0,1)/MUL)+trunc(currRt.at<double>(0,1)*resultRt.at<double>(1,1)/MUL)+
+                                     trunc(currRt.at<double>(0,2)*resultRt.at<double>(2,1)/MUL)+trunc(currRt.at<double>(0,3)*resultRt.at<double>(3,1)/MUL); 
+            resultRt.at<double>(0,2)=trunc(currRt.at<double>(0,0)*resultRt.at<double>(0,2)/MUL)+trunc(currRt.at<double>(0,1)*resultRt.at<double>(1,2)/MUL)+
+                                     trunc(currRt.at<double>(0,2)*resultRt.at<double>(2,2)/MUL)+trunc(currRt.at<double>(0,3)*resultRt.at<double>(3,2)/MUL); 
+            resultRt.at<double>(0,3)=trunc(currRt.at<double>(0,0)*resultRt.at<double>(0,3)/MUL)+trunc(currRt.at<double>(0,1)*resultRt.at<double>(1,3)/MUL)+
+                                     trunc(currRt.at<double>(0,2)*resultRt.at<double>(2,3)/MUL)+trunc(currRt.at<double>(0,3)*resultRt.at<double>(3,3)/MUL); 
+            resultRt.at<double>(1,0)=trunc(currRt.at<double>(1,0)*resultRt.at<double>(0,0)/MUL)+trunc(currRt.at<double>(1,1)*resultRt.at<double>(1,0)/MUL)+
+                                     trunc(currRt.at<double>(1,2)*resultRt.at<double>(2,0)/MUL)+trunc(currRt.at<double>(1,3)*resultRt.at<double>(3,0)/MUL); 
+            resultRt.at<double>(1,1)=trunc(currRt.at<double>(1,0)*resultRt.at<double>(0,1)/MUL)+trunc(currRt.at<double>(1,1)*resultRt.at<double>(1,1)/MUL)+
+                                     trunc(currRt.at<double>(1,2)*resultRt.at<double>(2,1)/MUL)+trunc(currRt.at<double>(1,3)*resultRt.at<double>(3,1)/MUL); 
+            resultRt.at<double>(1,2)=trunc(currRt.at<double>(1,0)*resultRt.at<double>(0,2)/MUL)+trunc(currRt.at<double>(1,1)*resultRt.at<double>(1,2)/MUL)+
+                                     trunc(currRt.at<double>(1,2)*resultRt.at<double>(2,2)/MUL)+trunc(currRt.at<double>(1,3)*resultRt.at<double>(3,2)/MUL); 
+            resultRt.at<double>(1,3)=trunc(currRt.at<double>(1,0)*resultRt.at<double>(0,3)/MUL)+trunc(currRt.at<double>(1,1)*resultRt.at<double>(1,3)/MUL)+
+                                     trunc(currRt.at<double>(1,2)*resultRt.at<double>(2,3)/MUL)+trunc(currRt.at<double>(1,3)*resultRt.at<double>(3,3)/MUL); 
+            resultRt.at<double>(2,0)=trunc(currRt.at<double>(2,0)*resultRt.at<double>(0,0)/MUL)+trunc(currRt.at<double>(2,1)*resultRt.at<double>(1,0)/MUL)+
+                                     trunc(currRt.at<double>(2,2)*resultRt.at<double>(2,0)/MUL)+trunc(currRt.at<double>(2,3)*resultRt.at<double>(3,0)/MUL); 
+            resultRt.at<double>(2,1)=trunc(currRt.at<double>(2,0)*resultRt.at<double>(0,1)/MUL)+trunc(currRt.at<double>(2,1)*resultRt.at<double>(1,1)/MUL)+
+                                     trunc(currRt.at<double>(2,2)*resultRt.at<double>(2,1)/MUL)+trunc(currRt.at<double>(2,3)*resultRt.at<double>(3,1)/MUL); 
+            resultRt.at<double>(2,2)=trunc(currRt.at<double>(2,0)*resultRt.at<double>(0,2)/MUL)+trunc(currRt.at<double>(2,1)*resultRt.at<double>(1,2)/MUL)+
+                                     trunc(currRt.at<double>(2,2)*resultRt.at<double>(2,2)/MUL)+trunc(currRt.at<double>(2,3)*resultRt.at<double>(3,2)/MUL); 
+            resultRt.at<double>(2,3)=trunc(currRt.at<double>(2,0)*resultRt.at<double>(0,3)/MUL)+trunc(currRt.at<double>(2,1)*resultRt.at<double>(1,3)/MUL)+
+                                     trunc(currRt.at<double>(2,2)*resultRt.at<double>(2,3)/MUL)+trunc(currRt.at<double>(2,3)*resultRt.at<double>(3,3)/MUL); 
+            resultRt.at<double>(3,0)=trunc(currRt.at<double>(3,0)*resultRt.at<double>(0,0)/MUL)+trunc(currRt.at<double>(3,1)*resultRt.at<double>(1,0)/MUL)+
+                                     trunc(currRt.at<double>(3,2)*resultRt.at<double>(2,0)/MUL)+trunc(currRt.at<double>(3,3)*resultRt.at<double>(3,0)/MUL); 
+            resultRt.at<double>(3,1)=trunc(currRt.at<double>(3,0)*resultRt.at<double>(0,1)/MUL)+trunc(currRt.at<double>(3,1)*resultRt.at<double>(1,1)/MUL)+
+                                     trunc(currRt.at<double>(3,2)*resultRt.at<double>(2,1)/MUL)+trunc(currRt.at<double>(3,3)*resultRt.at<double>(3,1)/MUL); 
+            resultRt.at<double>(3,2)=trunc(currRt.at<double>(3,0)*resultRt.at<double>(0,2)/MUL)+trunc(currRt.at<double>(3,1)*resultRt.at<double>(1,2)/MUL)+
+                                     trunc(currRt.at<double>(3,2)*resultRt.at<double>(2,2)/MUL)+trunc(currRt.at<double>(3,3)*resultRt.at<double>(3,2)/MUL); 
+            resultRt.at<double>(3,3)=trunc(currRt.at<double>(3,0)*resultRt.at<double>(0,3)/MUL)+trunc(currRt.at<double>(3,1)*resultRt.at<double>(1,3)/MUL)+
+                                     trunc(currRt.at<double>(3,2)*resultRt.at<double>(2,3)/MUL)+trunc(currRt.at<double>(3,3)*resultRt.at<double>(3,3)/MUL); 
             isOk = true;
         }
         //exit(1);
@@ -1198,15 +1258,24 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
     //cout << "v_max" << v_max << endl;
     Rt = resultRt;
 
+    for(int i = 0; i < Rt.rows; i++)
+    {
+        for(int j = 0; j < Rt.cols; j++)
+        {
+            Rt.at<double>(i, j) = Rt.at<double>(i, j) / MUL;
+        }
+    }
+
     if(isOk)
     {
-        Mat deltaRt;
-        if(initRt.empty())
-            deltaRt = resultRt;
-        else
-            deltaRt = resultRt * initRt.inv(DECOMP_SVD);
+        //Mat deltaRt;
+        //if(initRt.empty())
+        //    deltaRt = resultRt;
+        //else
+        //    deltaRt = resultRt * initRt.inv(DECOMP_SVD);
 
-        isOk = testDeltaTransformation(deltaRt, maxTranslation, maxRotation);
+        //isOk = testDeltaTransformation(deltaRt, maxTranslation, maxRotation);
+        isOk = testDeltaTransformation(resultRt, maxTranslation, maxRotation);
     }
 
     return isOk;
