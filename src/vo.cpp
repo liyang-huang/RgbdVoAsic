@@ -857,7 +857,7 @@ bool testDeltaTransformation(const Mat& deltaRt, double maxTranslation, double m
 }
 
 static
-void computeProjectiveMatrix(const Mat& ksi, Mat& Rt)
+bool computeProjectiveMatrix(const Mat& ksi, Mat& Rt, double maxTranslation, double maxRotation)
 {
     CV_Assert(ksi.size() == Size(1,6) && ksi.type() == CV_64FC1);
 
@@ -872,6 +872,7 @@ void computeProjectiveMatrix(const Mat& ksi, Mat& Rt)
 
     eigen2cv(g, Rt);
 #else
+
     // TODO: check computeProjectiveMatrix when there is not eigen library,
     //       because it gives less accurate pose of the camera
     Rt = Mat::eye(4, 4, CV_64FC1);
@@ -879,6 +880,13 @@ void computeProjectiveMatrix(const Mat& ksi, Mat& Rt)
 
     //Mat R = Rt(Rect(0,0,3,3));
     Mat rvec = ksi.rowRange(0,3);
+    double translation = norm(ksi.rowRange(3,6));
+    if(translation > trunc(maxTranslation*MUL))
+        return false;
+    double rotation = norm(rvec) * 180. / CV_PI;
+    if(rotation > trunc(maxRotation*MUL))
+        return false;
+ 
 
     //Rodrigues(rvec, R);
 
@@ -970,6 +978,7 @@ void computeProjectiveMatrix(const Mat& ksi, Mat& Rt)
     //cout << "R_fix: " << R_fix <<endl;
     //cout << "Rt: " << Rt <<endl;
     //exit(1);
+    return true;
 
 #endif
 }
@@ -1216,7 +1225,9 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                 break;
 
             //cout << "ksi " << ksi << endl;
-            computeProjectiveMatrix(ksi, currRt);
+            bool testDelta = computeProjectiveMatrix(ksi, currRt, maxTranslation, maxRotation);
+            if(!testDelta)
+                break;
             //resultRt = currRt * resultRt;
             resultRt.at<double>(0,0)=trunc(currRt.at<double>(0,0)*resultRt.at<double>(0,0)/MUL)+trunc(currRt.at<double>(0,1)*resultRt.at<double>(1,0)/MUL)+
                                      trunc(currRt.at<double>(0,2)*resultRt.at<double>(2,0)/MUL)+trunc(currRt.at<double>(0,3)*resultRt.at<double>(3,0)/MUL); 
@@ -1266,17 +1277,17 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
         }
     }
 
-    if(isOk)
-    {
-        //Mat deltaRt;
-        //if(initRt.empty())
-        //    deltaRt = resultRt;
-        //else
-        //    deltaRt = resultRt * initRt.inv(DECOMP_SVD);
+    //if(isOk)
+    //{
+    //    //Mat deltaRt;
+    //    //if(initRt.empty())
+    //    //    deltaRt = resultRt;
+    //    //else
+    //    //    deltaRt = resultRt * initRt.inv(DECOMP_SVD);
 
-        //isOk = testDeltaTransformation(deltaRt, maxTranslation, maxRotation);
-        isOk = testDeltaTransformation(resultRt, maxTranslation, maxRotation);
-    }
+    //    //isOk = testDeltaTransformation(deltaRt, maxTranslation, maxRotation);
+    //    isOk = testDeltaTransformation(resultRt, maxTranslation, maxRotation);
+    //}
 
     return isOk;
 }
