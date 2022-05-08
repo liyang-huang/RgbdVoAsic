@@ -33,6 +33,8 @@ file(GLOB TARGET_SRC
      #src/*.cpp
      src/main.cpp
      src/vo.cpp
+     src/MYORB.cpp
+     src/Gaussian_pattern.cpp
 )
 
 include_directories(${OpenCV_INCLUDE_DIRS} include)

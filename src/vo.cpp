@@ -5,6 +5,9 @@
 #include <math.h>
 
 #include "vo.hpp"
+#include "MYORB.h"
+
+#define USE_MYORB 0// 1: MYORB, 0 : opencv ORB
 
 using namespace cv;
 using namespace std;
@@ -723,10 +726,6 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
     //    return false;
 
     //solve(AtA, AtB, x, DECOMP_CHOLESKY);
-    //cout << "AtA " << AtA << endl;
-    //cout << "AtB " << AtB << endl;
-    //cout << "x " << x << endl;
-    //exit(1);
     int rows = AtA.rows;
     int cols = AtA.cols;
     Mat A = AtA.clone();
@@ -736,7 +735,6 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
     {
         for(int m = 0; m < k; m++) //dkk = akk - lkm * lkm * dmm  = akk - lkm * umk 
         {
-            //A.at<double>(k, k) = A.at<double>(k, k) - (A.at<double>(k, m) * A.at<double>(m, k));
             A.at<double>(k, k) = A.at<double>(k, k) - trunc((A.at<double>(k, m) * A.at<double>(m, k)) / MUL);
         }
  
@@ -744,15 +742,12 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
         {
             for(int m = 0; m < k; m++) //uki = aki - lkm * umi
             {
-                 //A.at<double>(k, i) = A.at<double>(k, i) - (A.at<double>(m, i) * A.at<double>(k, m));
                  A.at<double>(k, i) = A.at<double>(k, i) - trunc((A.at<double>(m, i) * A.at<double>(k, m)) / MUL);
             }
             if(fabs(A.at<double>(k, k)) <= DBL_EPSILON)
                 return false;
-                //cout << "===========DIV 0===================== " << A.at<double>(k, k) << endl;
          
             //lik = uki / dkk 
-            //A.at<double>(i, k) = A.at<double>(k, i) / A.at<double>(k, k);
             A.at<double>(i, k) = trunc(A.at<double>(k, i) * MUL / A.at<double>(k, k));
         }
     }
@@ -761,7 +756,6 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
     {
         for(int k = 0; k < i; k++)
         {
-            //B.at<double>(i, 0) = B.at<double>(i, 0) - (A.at<double>(i, k) * B.at<double>(k, 0));
             B.at<double>(i, 0) = B.at<double>(i, 0) - trunc((A.at<double>(i, k) * B.at<double>(k, 0)) / MUL);
         }
     }
@@ -770,66 +764,13 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
     {
         if(fabs(A.at<double>(i, i)) <= DBL_EPSILON)
             return false;
-            //cout << "===========DIV 0===================== " << A.at<double>(i, i) << endl;
-        //B.at<double>(i, 0) = B.at<double>(i, 0) / A.at<double>(i, i);
         B.at<double>(i, 0) = trunc(B.at<double>(i, 0) * MUL / A.at<double>(i, i));
         for(int k = i+1; k < rows; k++)
         {
-            //B.at<double>(i, 0) = B.at<double>(i, 0) - (A.at<double>(k, i) * B.at<double>(k, 0));
             B.at<double>(i, 0) = B.at<double>(i, 0) - trunc((A.at<double>(k, i) * B.at<double>(k, 0)) / MUL);
         }
     }
 
-    //Mat L (rows, cols, CV_64FC1, Scalar::all(0));
-    //Mat U (rows, cols, CV_64FC1, Scalar::all(0));
-    //L.at<double>(0, 0) = 1.0;
-    //L.at<double>(1, 0) = A.at<double>(1, 0);
-    //L.at<double>(2, 0) = A.at<double>(2, 0);
-    //L.at<double>(3, 0) = A.at<double>(3, 0);
-    //L.at<double>(4, 0) = A.at<double>(4, 0);
-    //L.at<double>(5, 0) = A.at<double>(5, 0);
-    //L.at<double>(1, 1) = 1.0;
-    //L.at<double>(2, 1) = A.at<double>(2, 1);
-    //L.at<double>(3, 1) = A.at<double>(3, 1);
-    //L.at<double>(4, 1) = A.at<double>(4, 1);
-    //L.at<double>(5, 1) = A.at<double>(5, 1);
-    //L.at<double>(2, 2) = 1.0;
-    //L.at<double>(3, 2) = A.at<double>(3, 2);
-    //L.at<double>(4, 2) = A.at<double>(4, 2);
-    //L.at<double>(5, 2) = A.at<double>(5, 2);
-    //L.at<double>(3, 3) = 1.0;
-    //L.at<double>(4, 3) = A.at<double>(4, 3);
-    //L.at<double>(5, 3) = A.at<double>(5, 3);
-    //L.at<double>(4, 4) = 1.0;
-    //L.at<double>(5, 4) = A.at<double>(5, 4);
-    //L.at<double>(5, 5) = 1.0;
-    //U.at<double>(0, 0) = A.at<double>(0, 0);
-    //U.at<double>(0, 1) = A.at<double>(0, 1);
-    //U.at<double>(0, 2) = A.at<double>(0, 2);
-    //U.at<double>(0, 3) = A.at<double>(0, 3);
-    //U.at<double>(0, 4) = A.at<double>(0, 4);
-    //U.at<double>(0, 5) = A.at<double>(0, 5);
-    //U.at<double>(1, 1) = A.at<double>(1, 1);
-    //U.at<double>(1, 2) = A.at<double>(1, 2);
-    //U.at<double>(1, 3) = A.at<double>(1, 3);
-    //U.at<double>(1, 4) = A.at<double>(1, 4);
-    //U.at<double>(1, 5) = A.at<double>(1, 5);
-    //U.at<double>(2, 2) = A.at<double>(2, 2);
-    //U.at<double>(2, 3) = A.at<double>(2, 3);
-    //U.at<double>(2, 4) = A.at<double>(2, 4);
-    //U.at<double>(2, 5) = A.at<double>(2, 5);
-    //U.at<double>(3, 3) = A.at<double>(3, 3);
-    //U.at<double>(3, 4) = A.at<double>(3, 4);
-    //U.at<double>(3, 5) = A.at<double>(3, 5);
-    //U.at<double>(4, 4) = A.at<double>(4, 4);
-    //U.at<double>(4, 5) = A.at<double>(4, 5);
-    //U.at<double>(5, 5) = A.at<double>(5, 5);
-    //cout << "A " << A << endl;
-    //cout << "L " << L << endl;
-    //cout << "U " << U << endl;
-    //cout << "L*U " << L*U << endl;
-    //cout << "B " << B << endl;
-    //exit(1);
     x = B;
     //for(int i = 0; i < rows; i++)
     //{
@@ -1151,6 +1092,8 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
             else 
             {
                ///////////////////////////////////////////////
+               #if !USE_MYORB
+               
                std::vector<KeyPoint> keypoints_1, keypoints_2;
                Mat descriptors_1, descriptors_2;
                Ptr<FeatureDetector> detector = ORB::create();
@@ -1209,13 +1152,51 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                //cout << "corresps " << corresps_feature.size() << endl;
                //exit(1);
 
+               #else
+               // ============ Use Frank's ORB to do feature matching ============
+               #define FAST_N                          9
+               #define FAST_threshold                  20
+               #define FAST_orientation_patch_size     7
+               #define FAST_scorethreshold             60
+               #define FAST_edgethreshold              31
+               #define keypoints_num                   500
+               #define MATCH_threshold                 30
+               // Image pyramid
+               #define FAST_nlevels                    4
+               #define FAST_scaling                    2
+               
+               // cout << srcFrame->image.rows << " " << srcFrame->image.cols << endl;
+               MYORB orb(FAST_N, FAST_threshold, FAST_orientation_patch_size, FAST_scorethreshold, FAST_edgethreshold, keypoints_num, MATCH_threshold, FAST_nlevels, FAST_scaling, srcFrame->image, dstFrame->image);
+               std::vector<DMatch> matches = orb.Matching();
+
+               // Delete matches without depth information
+               std::vector<DMatch> good_matches;
+               for ( int i = 0; i < matches.size(); i++ )
+               {
+                   KeyPoint k = orb.POINT_k1(matches[i].trainIdx);
+                   if(srcFrame->maskDepth.at<uchar>(k.pt.y, k.pt.x))
+                   //if(srcFrame->maskDepth.at<uchar>(keypoints_1[matches[i].queryIdx].pt.y, keypoints_1[matches[i].queryIdx].pt.x))
+                       good_matches.push_back(matches[i]);
+               }
+               //cout << good_matches.size() << endl;
+
+               Mat corresps_feature;
+               corresps_feature.create(good_matches.size(), 1, CV_32SC4);
+               Vec4i * corresps_feature_ptr = corresps_feature.ptr<Vec4i>();
+               for(int idx = 0, i = 0; idx < good_matches.size(); idx++)
+               {
+                   KeyPoint k1 = orb.POINT_k1(good_matches[i].trainIdx);
+                   KeyPoint k2 = orb.POINT_k2(good_matches[i].queryIdx);
+                   corresps_feature_ptr[i++] = Vec4i(k1.pt.x, k1.pt.y, k2.pt.x, k2.pt.y);
+               }
+               #endif
+               // ================================================================
+
                Mat AtA_feature, AtB_feature;
                calcFeatureLsmMatrices(srcFrame->cloud, resultRt,
                                      corresps_feature, fx, fy, cx, cy,
                                      AtA_feature, AtB_feature, featureXEquationFuncPtr, featureYEquationFuncPtr, transformDim);
 
-               //AtA += AtA_feature / MUL;
-               //AtB += AtB_feature / MUL;
                AtA += AtA_feature;
                AtB += AtB_feature;
             }
@@ -1224,7 +1205,6 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
             if(!solutionExist)
                 break;
 
-            //cout << "ksi " << ksi << endl;
             bool testDelta = computeProjectiveMatrix(ksi, currRt, maxTranslation, maxRotation);
             if(!testDelta)
                 break;
