@@ -7,17 +7,18 @@
 #include "vo.hpp"
 #include "MYORB.h"
 
-#define USE_MYORB 0// 1: MYORB, 0 : opencv ORB
+#define USE_MYORB 1// 1: MYORB, 0 : opencv ORB
 
 using namespace cv;
 using namespace std;
 //
-const int maxLineDiff = 20;
+const int maxLineDiff = 30;
 const int sobelSize = 3;
 const double sobelScale = 1./8.;
 
 const bool pyramid_on = false;
 const int feature_iter_num = 5;
+const int feature_corr_num = 12;
 
 double trunc(double num){
 	return (num<0)?ceil(num):floor(num);
@@ -32,6 +33,7 @@ void setDefaultIterCounts(Mat& iterCounts)
         iterCounts = Mat(Vec4i(7,7,7,7));
     else
         iterCounts = Mat(Vec4i(7));
+        //iterCounts = Mat(Vec4i(3));
 }
 
 static inline
@@ -772,10 +774,16 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
     }
 
     x = B;
-    //for(int i = 0; i < rows; i++)
-    //{
-    //        x.at<double>(i, 0) = x.at<double>(i, 0) / MUL;
-    //}
+    //cout << "AtA " << AtA << endl;
+    //cout << "AtB " << AtB << endl;
+    //cout << "A " << A << endl;
+    //cout << "B " << B << endl;
+    for(int i = 0; i < rows; i++)
+    {
+            //x.at<double>(i, 0) = x.at<double>(i, 0) / MUL;
+            if(isnan(x.at<double>(i, 0)))
+                exit(1);
+    }
     //cout << "x " << x << endl;
     //cout << "A*x " << AtA*x << endl;
     //cout << "B " << AtB << endl;
@@ -1053,7 +1061,8 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
 
                 int v_rgbd = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, 
                                              //resultRt_inv, srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskText,
-                                             resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskText,
+                                             //resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskText,
+                                             resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskDepth,
                                              maxDepthDiff, corresps_rgbd);
                 if (v_rgbd > v_max)
                     v_max = v_rgbd;
@@ -1122,8 +1131,10 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                {
                    if ( matches[i].distance <= max ( 2*min_dist, 30.0 ) )
                    {
-                       if(srcFrame->maskDepth.at<uchar>(keypoints_1[matches[i].queryIdx].pt.y, keypoints_1[matches[i].queryIdx].pt.x))
-                           good_matches.push_back ( matches[i] );
+                       if(srcFrame->maskDepth.at<uchar>(keypoints_1[matches[i].queryIdx].pt.y, keypoints_1[matches[i].queryIdx].pt.x)){
+                           if(abs(keypoints_1[matches[i].queryIdx].pt.y - keypoints_2[matches[i].trainIdx].pt.y) <= maxLineDiff) 
+                               good_matches.push_back ( matches[i] );
+                       }
                    }
                }
 
@@ -1145,8 +1156,9 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                Vec4i * corresps_feature_ptr = corresps_feature.ptr<Vec4i>();
                for(int idx = 0, i = 0; idx < good_matches.size(); idx++)
                {
-                   corresps_feature_ptr[i++] = Vec4i(keypoints_1[good_matches[idx].queryIdx].pt.x, keypoints_1[good_matches[idx].queryIdx].pt.y, 
-                                                     keypoints_2[good_matches[idx].trainIdx].pt.x, keypoints_2[good_matches[idx].trainIdx].pt.y);
+                   //if(abs(keypoints_1[good_matches[idx].queryIdx].pt.y - keypoints_2[good_matches[idx].trainIdx].pt.y) <= maxLineDiff) 
+                       corresps_feature_ptr[i++] = Vec4i(keypoints_1[good_matches[idx].queryIdx].pt.x, keypoints_1[good_matches[idx].queryIdx].pt.y, 
+                                                         keypoints_2[good_matches[idx].trainIdx].pt.x, keypoints_2[good_matches[idx].trainIdx].pt.y);
                }
                //cout << "corresps " << corresps_feature << endl;
                //cout << "corresps " << corresps_feature.size() << endl;
@@ -1174,9 +1186,12 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                for ( int i = 0; i < matches.size(); i++ )
                {
                    KeyPoint k = orb.POINT_k1(matches[i].trainIdx);
+                   KeyPoint k2 = orb.POINT_k2(matches[i].queryIdx);
                    if(srcFrame->maskDepth.at<uchar>(k.pt.y, k.pt.x))
-                   //if(srcFrame->maskDepth.at<uchar>(keypoints_1[matches[i].queryIdx].pt.y, keypoints_1[matches[i].queryIdx].pt.x))
-                       good_matches.push_back(matches[i]);
+                   {
+                       if(abs(k.pt.y - k2.pt.y) <= maxLineDiff) 
+                           good_matches.push_back(matches[i]);
+                   }
                }
                //cout << good_matches.size() << endl;
 
@@ -1192,15 +1207,19 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                #endif
                // ================================================================
 
-               Mat AtA_feature, AtB_feature;
-               calcFeatureLsmMatrices(srcFrame->cloud, resultRt,
-                                     corresps_feature, fx, fy, cx, cy,
-                                     AtA_feature, AtB_feature, featureXEquationFuncPtr, featureYEquationFuncPtr, transformDim);
+               //if(corresps_feature.rows >= minCorrespsCount)
+               if(corresps_feature.rows >= feature_corr_num)
+               {
+                   Mat AtA_feature, AtB_feature;
+                   calcFeatureLsmMatrices(srcFrame->cloud, resultRt,
+                                         corresps_feature, fx, fy, cx, cy,
+                                         AtA_feature, AtB_feature, featureXEquationFuncPtr, featureYEquationFuncPtr, transformDim);
 
-               AtA += AtA_feature;
-               AtB += AtB_feature;
+                   AtA += AtA_feature;
+                   AtB += AtB_feature;
+               }
             }
-
+            //cout << "iter " << iter << endl;
             bool solutionExist = solveSystem(AtA, AtB, determinantThreshold, ksi);
             if(!solutionExist)
                 break;

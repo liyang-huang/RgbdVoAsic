@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 project(liyang-odometry)
 
 #set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_BUILD_TYPE "Release")
 #set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
 
 #c++11
@@ -16,6 +17,8 @@ elseif(COMPILER_SUPPORTS_CXX0X)
 else()
     message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
 endif()
+
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 #opencv
 #find_package(OpenCV 3.1)
