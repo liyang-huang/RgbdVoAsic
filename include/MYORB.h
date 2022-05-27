@@ -17,6 +17,7 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <vector> // vector
+#include <bitset> // print descriptor
  
 
 using namespace std;
@@ -39,26 +40,43 @@ class MYORB {
         vector<Mat>         img_pyramid_1;
         vector<Mat>         img_pyramid_2;
 
+        // options
+        bool                DISPLAY;
+        bool                FIXED;
+        bool                TESTBENCH; 
+
         // output to file
         string              outfile_name;
         fstream             outfile;
+
+        // FAST testbench
+        fstream             result_test;
+        fstream             result_NMS;
+        fstream             result_coordinates;
+        fstream             result_mx;
+        fstream             result_my;
+        fstream             result_score;
+        fstream             read;
+        fstream             pixel_in;
+        fstream             pixel_smooth;
+        
         
         // img1
         Mat                 img_1;
         Mat                 smth_1;
         vector<KeyPoint>    keylist_1;
         Mat                 descriptor_1; 
-        vector<int>         orientation_1;
+        vector<int>         cos_1;
+        vector<int>         sin_1;
+        int                 min_thres;
 
         // img2
         Mat                 img_2;
         Mat                 smth_2;
         vector<KeyPoint>    keylist_2;
         Mat                 descriptor_2; 
-        vector<int>         orientation_2;
-
-        // HBST (Hamming distance embedded binary search tree)
-        vector<vector<int>> HBST_index_buckets;        
+        vector<int>         cos_2;
+        vector<int>         sin_2;     
         
         // match
         vector<DMatch>      matches;
@@ -66,7 +84,7 @@ class MYORB {
     
     public:
         // Constructor
-        MYORB(int, int, int, int, int, int, int, int, float, Mat, Mat);
+        MYORB(int, int, int, int, int, int, int, int, float, Mat, Mat, bool, bool, bool);
 
         // Called by the main program
         vector<DMatch>     Matching();
@@ -83,7 +101,7 @@ class MYORB {
         void    FAST_keypoint_output(vector<KeyPoint>&);
 
         // BRIEF
-        void    BRIEF_pattern_LUT(int, float, int&, int&, int&, int&);
+        void    BRIEF_pattern_LUT(int, float, int, int, int&, int&, int&, int&);
         void    BRIEF_descriptor(int);
         bool    BRIEF_searcher(int, int, Mat&);
         void    BRIEF_smoothing();
@@ -91,8 +109,6 @@ class MYORB {
         // Matching
         int     MATCH_Hamming_distance(uchar, uchar);
         void    MATCH_BFmatcher();
-        void    MATCH_HBST_matcher();
-        void    MATCH_HBST_construct();
         void    MATCH_matches_output();
         void    MATCH_optimization();
 
@@ -102,7 +118,6 @@ class MYORB {
 
         // old descriptor
         void BRIEF_descriptor_old();
-    
 };
 
 #endif

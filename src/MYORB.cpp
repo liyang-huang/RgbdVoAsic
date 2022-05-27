@@ -5,107 +5,6 @@
 using namespace cv;
 using namespace std;
 
-inline int smoothedSum(Mat& sum, KeyPoint& pt, int y, int x){
-    int HALF_KERNEL = 4;
-    int img_y = pt.pt.y + y;
-    int img_x = pt.pt.x + x;
-    return sum.at<int>(img_y + HALF_KERNEL + 1, img_x + HALF_KERNEL + 1)
-            - sum.at<int>(img_y + HALF_KERNEL + 1, img_x - HALF_KERNEL)
-            - sum.at<int>(img_y - HALF_KERNEL, img_x + HALF_KERNEL + 1)
-            + sum.at<int>(img_y - HALF_KERNEL, img_x - HALF_KERNEL);
-}
-
-void MYORB::BRIEF_descriptor_old(){
-    Mat sum_1, sum_2;
-    integral(img_1, sum_1, CV_32S);
-    integral(img_2, sum_2, CV_32S);
-    for(int i =0 ; i < keylist_1.size(); i++){
-        KeyPoint pt = keylist_1[i];
-        uchar desc[32];
-        #define SMOOTHED(y,x) smoothedSum(sum_1, pt, y, x)
-            desc[0] = (uchar)(((SMOOTHED(-2, -1) < SMOOTHED(7, -1)) << 7) + ((SMOOTHED(-14, -1) < SMOOTHED(-3, 3)) << 6) + ((SMOOTHED(1, -2) < SMOOTHED(11, 2)) << 5) + ((SMOOTHED(1, 6) < SMOOTHED(-10, -7)) << 4) + ((SMOOTHED(13, 2) < SMOOTHED(-1, 0)) << 3) + ((SMOOTHED(-14, 5) < SMOOTHED(5, -3)) << 2) + ((SMOOTHED(-2, 8) < SMOOTHED(2, 4)) << 1) + ((SMOOTHED(-11, 8) < SMOOTHED(-15, 5)) << 0));
-            desc[1] = (uchar)(((SMOOTHED(-6, -23) < SMOOTHED(8, -9)) << 7) + ((SMOOTHED(-12, 6) < SMOOTHED(-10, 8)) << 6) + ((SMOOTHED(-3, -1) < SMOOTHED(8, 1)) << 5) + ((SMOOTHED(3, 6) < SMOOTHED(5, 6)) << 4) + ((SMOOTHED(-7, -6) < SMOOTHED(5, -5)) << 3) + ((SMOOTHED(22, -2) < SMOOTHED(-11, -8)) << 2) + ((SMOOTHED(14, 7) < SMOOTHED(8, 5)) << 1) + ((SMOOTHED(-1, 14) < SMOOTHED(-5, -14)) << 0));
-            desc[2] = (uchar)(((SMOOTHED(-14, 9) < SMOOTHED(2, 0)) << 7) + ((SMOOTHED(7, -3) < SMOOTHED(22, 6)) << 6) + ((SMOOTHED(-6, 6) < SMOOTHED(-8, -5)) << 5) + ((SMOOTHED(-5, 9) < SMOOTHED(7, -1)) << 4) + ((SMOOTHED(-3, -7) < SMOOTHED(-10, -18)) << 3) + ((SMOOTHED(4, -5) < SMOOTHED(0, 11)) << 2) + ((SMOOTHED(2, 3) < SMOOTHED(9, 10)) << 1) + ((SMOOTHED(-10, 3) < SMOOTHED(4, 9)) << 0));
-            desc[3] = (uchar)(((SMOOTHED(0, 12) < SMOOTHED(-3, 19)) << 7) + ((SMOOTHED(1, 15) < SMOOTHED(-11, -5)) << 6) + ((SMOOTHED(14, -1) < SMOOTHED(7, 8)) << 5) + ((SMOOTHED(7, -23) < SMOOTHED(-5, 5)) << 4) + ((SMOOTHED(0, -6) < SMOOTHED(-10, 17)) << 3) + ((SMOOTHED(13, -4) < SMOOTHED(-3, -4)) << 2) + ((SMOOTHED(-12, 1) < SMOOTHED(-12, 2)) << 1) + ((SMOOTHED(0, 8) < SMOOTHED(3, 22)) << 0));
-            desc[4] = (uchar)(((SMOOTHED(-13, 13) < SMOOTHED(3, -1)) << 7) + ((SMOOTHED(-16, 17) < SMOOTHED(6, 10)) << 6) + ((SMOOTHED(7, 15) < SMOOTHED(-5, 0)) << 5) + ((SMOOTHED(2, -12) < SMOOTHED(19, -2)) << 4) + ((SMOOTHED(3, -6) < SMOOTHED(-4, -15)) << 3) + ((SMOOTHED(8, 3) < SMOOTHED(0, 14)) << 2) + ((SMOOTHED(4, -11) < SMOOTHED(5, 5)) << 1) + ((SMOOTHED(11, -7) < SMOOTHED(7, 1)) << 0));
-            desc[5] = (uchar)(((SMOOTHED(6, 12) < SMOOTHED(21, 3)) << 7) + ((SMOOTHED(-3, 2) < SMOOTHED(14, 1)) << 6) + ((SMOOTHED(5, 1) < SMOOTHED(-5, 11)) << 5) + ((SMOOTHED(3, -17) < SMOOTHED(-6, 2)) << 4) + ((SMOOTHED(6, 8) < SMOOTHED(5, -10)) << 3) + ((SMOOTHED(-14, -2) < SMOOTHED(0, 4)) << 2) + ((SMOOTHED(5, -7) < SMOOTHED(-6, 5)) << 1) + ((SMOOTHED(10, 4) < SMOOTHED(4, -7)) << 0));
-            desc[6] = (uchar)(((SMOOTHED(22, 0) < SMOOTHED(7, -18)) << 7) + ((SMOOTHED(-1, -3) < SMOOTHED(0, 18)) << 6) + ((SMOOTHED(-4, 22) < SMOOTHED(-5, 3)) << 5) + ((SMOOTHED(1, -7) < SMOOTHED(2, -3)) << 4) + ((SMOOTHED(19, -20) < SMOOTHED(17, -2)) << 3) + ((SMOOTHED(3, -10) < SMOOTHED(-8, 24)) << 2) + ((SMOOTHED(-5, -14) < SMOOTHED(7, 5)) << 1) + ((SMOOTHED(-2, 12) < SMOOTHED(-4, -15)) << 0));
-            desc[7] = (uchar)(((SMOOTHED(4, 12) < SMOOTHED(0, -19)) << 7) + ((SMOOTHED(20, 13) < SMOOTHED(3, 5)) << 6) + ((SMOOTHED(-8, -12) < SMOOTHED(5, 0)) << 5) + ((SMOOTHED(-5, 6) < SMOOTHED(-7, -11)) << 4) + ((SMOOTHED(6, -11) < SMOOTHED(-3, -22)) << 3) + ((SMOOTHED(15, 4) < SMOOTHED(10, 1)) << 2) + ((SMOOTHED(-7, -4) < SMOOTHED(15, -6)) << 1) + ((SMOOTHED(5, 10) < SMOOTHED(0, 24)) << 0));
-            desc[8] = (uchar)(((SMOOTHED(3, 6) < SMOOTHED(22, -2)) << 7) + ((SMOOTHED(-13, 14) < SMOOTHED(4, -4)) << 6) + ((SMOOTHED(-13, 8) < SMOOTHED(-18, -22)) << 5) + ((SMOOTHED(-1, -1) < SMOOTHED(-7, 3)) << 4) + ((SMOOTHED(-19, -12) < SMOOTHED(4, 3)) << 3) + ((SMOOTHED(8, 10) < SMOOTHED(13, -2)) << 2) + ((SMOOTHED(-6, -1) < SMOOTHED(-6, -5)) << 1) + ((SMOOTHED(2, -21) < SMOOTHED(-3, 2)) << 0));
-            desc[9] = (uchar)(((SMOOTHED(4, -7) < SMOOTHED(0, 16)) << 7) + ((SMOOTHED(-6, -5) < SMOOTHED(-12, -1)) << 6) + ((SMOOTHED(1, -1) < SMOOTHED(9, 18)) << 5) + ((SMOOTHED(-7, 10) < SMOOTHED(-11, 6)) << 4) + ((SMOOTHED(4, 3) < SMOOTHED(19, -7)) << 3) + ((SMOOTHED(-18, 5) < SMOOTHED(-4, 5)) << 2) + ((SMOOTHED(4, 0) < SMOOTHED(-20, 4)) << 1) + ((SMOOTHED(7, -11) < SMOOTHED(18, 12)) << 0));
-            desc[10] = (uchar)(((SMOOTHED(-20, 17) < SMOOTHED(-18, 7)) << 7) + ((SMOOTHED(2, 15) < SMOOTHED(19, -11)) << 6) + ((SMOOTHED(-18, 6) < SMOOTHED(-7, 3)) << 5) + ((SMOOTHED(-4, 1) < SMOOTHED(-14, 13)) << 4) + ((SMOOTHED(17, 3) < SMOOTHED(2, -8)) << 3) + ((SMOOTHED(-7, 2) < SMOOTHED(1, 6)) << 2) + ((SMOOTHED(17, -9) < SMOOTHED(-2, 8)) << 1) + ((SMOOTHED(-8, -6) < SMOOTHED(-1, 12)) << 0));
-            desc[11] = (uchar)(((SMOOTHED(-2, 4) < SMOOTHED(-1, 6)) << 7) + ((SMOOTHED(-2, 7) < SMOOTHED(6, 8)) << 6) + ((SMOOTHED(-8, -1) < SMOOTHED(-7, -9)) << 5) + ((SMOOTHED(8, -9) < SMOOTHED(15, 0)) << 4) + ((SMOOTHED(0, 22) < SMOOTHED(-4, -15)) << 3) + ((SMOOTHED(-14, -1) < SMOOTHED(3, -2)) << 2) + ((SMOOTHED(-7, -4) < SMOOTHED(17, -7)) << 1) + ((SMOOTHED(-8, -2) < SMOOTHED(9, -4)) << 0));
-            desc[12] = (uchar)(((SMOOTHED(5, -7) < SMOOTHED(7, 7)) << 7) + ((SMOOTHED(-5, 13) < SMOOTHED(-8, 11)) << 6) + ((SMOOTHED(11, -4) < SMOOTHED(0, 8)) << 5) + ((SMOOTHED(5, -11) < SMOOTHED(-9, -6)) << 4) + ((SMOOTHED(2, -6) < SMOOTHED(3, -20)) << 3) + ((SMOOTHED(-6, 2) < SMOOTHED(6, 10)) << 2) + ((SMOOTHED(-6, -6) < SMOOTHED(-15, 7)) << 1) + ((SMOOTHED(-6, -3) < SMOOTHED(2, 1)) << 0));
-            desc[13] = (uchar)(((SMOOTHED(11, 0) < SMOOTHED(-3, 2)) << 7) + ((SMOOTHED(7, -12) < SMOOTHED(14, 5)) << 6) + ((SMOOTHED(0, -7) < SMOOTHED(-1, -1)) << 5) + ((SMOOTHED(-16, 0) < SMOOTHED(6, 8)) << 4) + ((SMOOTHED(22, 11) < SMOOTHED(0, -3)) << 3) + ((SMOOTHED(19, 0) < SMOOTHED(5, -17)) << 2) + ((SMOOTHED(-23, -14) < SMOOTHED(-13, -19)) << 1) + ((SMOOTHED(-8, 10) < SMOOTHED(-11, -2)) << 0));
-            desc[14] = (uchar)(((SMOOTHED(-11, 6) < SMOOTHED(-10, 13)) << 7) + ((SMOOTHED(1, -7) < SMOOTHED(14, 0)) << 6) + ((SMOOTHED(-12, 1) < SMOOTHED(-5, -5)) << 5) + ((SMOOTHED(4, 7) < SMOOTHED(8, -1)) << 4) + ((SMOOTHED(-1, -5) < SMOOTHED(15, 2)) << 3) + ((SMOOTHED(-3, -1) < SMOOTHED(7, -10)) << 2) + ((SMOOTHED(3, -6) < SMOOTHED(10, -18)) << 1) + ((SMOOTHED(-7, -13) < SMOOTHED(-13, 10)) << 0));
-            desc[15] = (uchar)(((SMOOTHED(1, -1) < SMOOTHED(13, -10)) << 7) + ((SMOOTHED(-19, 14) < SMOOTHED(8, -14)) << 6) + ((SMOOTHED(-4, -13) < SMOOTHED(7, 1)) << 5) + ((SMOOTHED(1, -2) < SMOOTHED(12, -7)) << 4) + ((SMOOTHED(3, -5) < SMOOTHED(1, -5)) << 3) + ((SMOOTHED(-2, -2) < SMOOTHED(8, -10)) << 2) + ((SMOOTHED(2, 14) < SMOOTHED(8, 7)) << 1) + ((SMOOTHED(3, 9) < SMOOTHED(8, 2)) << 0));
-            desc[16] = (uchar)(((SMOOTHED(-9, 1) < SMOOTHED(-18, 0)) << 7) + ((SMOOTHED(4, 0) < SMOOTHED(1, 12)) << 6) + ((SMOOTHED(0, 9) < SMOOTHED(-14, -10)) << 5) + ((SMOOTHED(-13, -9) < SMOOTHED(-2, 6)) << 4) + ((SMOOTHED(1, 5) < SMOOTHED(10, 10)) << 3) + ((SMOOTHED(-3, -6) < SMOOTHED(-16, -5)) << 2) + ((SMOOTHED(11, 6) < SMOOTHED(-5, 0)) << 1) + ((SMOOTHED(-23, 10) < SMOOTHED(1, 2)) << 0));
-            desc[17] = (uchar)(((SMOOTHED(13, -5) < SMOOTHED(-3, 9)) << 7) + ((SMOOTHED(-4, -1) < SMOOTHED(-13, -5)) << 6) + ((SMOOTHED(10, 13) < SMOOTHED(-11, 8)) << 5) + ((SMOOTHED(19, 20) < SMOOTHED(-9, 2)) << 4) + ((SMOOTHED(4, -8) < SMOOTHED(0, -9)) << 3) + ((SMOOTHED(-14, 10) < SMOOTHED(15, 19)) << 2) + ((SMOOTHED(-14, -12) < SMOOTHED(-10, -3)) << 1) + ((SMOOTHED(-23, -3) < SMOOTHED(17, -2)) << 0));
-            desc[18] = (uchar)(((SMOOTHED(-3, -11) < SMOOTHED(6, -14)) << 7) + ((SMOOTHED(19, -2) < SMOOTHED(-4, 2)) << 6) + ((SMOOTHED(-5, 5) < SMOOTHED(3, -13)) << 5) + ((SMOOTHED(2, -2) < SMOOTHED(-5, 4)) << 4) + ((SMOOTHED(17, 4) < SMOOTHED(17, -11)) << 3) + ((SMOOTHED(-7, -2) < SMOOTHED(1, 23)) << 2) + ((SMOOTHED(8, 13) < SMOOTHED(1, -16)) << 1) + ((SMOOTHED(-13, -5) < SMOOTHED(1, -17)) << 0));
-            desc[19] = (uchar)(((SMOOTHED(4, 6) < SMOOTHED(-8, -3)) << 7) + ((SMOOTHED(-5, -9) < SMOOTHED(-2, -10)) << 6) + ((SMOOTHED(-9, 0) < SMOOTHED(-7, -2)) << 5) + ((SMOOTHED(5, 0) < SMOOTHED(5, 2)) << 4) + ((SMOOTHED(-4, -16) < SMOOTHED(6, 3)) << 3) + ((SMOOTHED(2, -15) < SMOOTHED(-2, 12)) << 2) + ((SMOOTHED(4, -1) < SMOOTHED(6, 2)) << 1) + ((SMOOTHED(1, 1) < SMOOTHED(-2, -8)) << 0));
-            desc[20] = (uchar)(((SMOOTHED(-2, 12) < SMOOTHED(-5, -2)) << 7) + ((SMOOTHED(-8, 8) < SMOOTHED(-9, 9)) << 6) + ((SMOOTHED(2, -10) < SMOOTHED(3, 1)) << 5) + ((SMOOTHED(-4, 10) < SMOOTHED(-9, 4)) << 4) + ((SMOOTHED(6, 12) < SMOOTHED(2, 5)) << 3) + ((SMOOTHED(-3, -8) < SMOOTHED(0, 5)) << 2) + ((SMOOTHED(-13, 1) < SMOOTHED(-7, 2)) << 1) + ((SMOOTHED(-1, -10) < SMOOTHED(7, -18)) << 0));
-            desc[21] = (uchar)(((SMOOTHED(-1, 8) < SMOOTHED(-9, -10)) << 7) + ((SMOOTHED(-23, -1) < SMOOTHED(6, 2)) << 6) + ((SMOOTHED(-5, -3) < SMOOTHED(3, 2)) << 5) + ((SMOOTHED(0, 11) < SMOOTHED(-4, -7)) << 4) + ((SMOOTHED(15, 2) < SMOOTHED(-10, -3)) << 3) + ((SMOOTHED(-20, -8) < SMOOTHED(-13, 3)) << 2) + ((SMOOTHED(-19, -12) < SMOOTHED(5, -11)) << 1) + ((SMOOTHED(-17, -13) < SMOOTHED(-3, 2)) << 0));
-            desc[22] = (uchar)(((SMOOTHED(7, 4) < SMOOTHED(-12, 0)) << 7) + ((SMOOTHED(5, -1) < SMOOTHED(-14, -6)) << 6) + ((SMOOTHED(-4, 11) < SMOOTHED(0, -4)) << 5) + ((SMOOTHED(3, 10) < SMOOTHED(7, -3)) << 4) + ((SMOOTHED(13, 21) < SMOOTHED(-11, 6)) << 3) + ((SMOOTHED(-12, 24) < SMOOTHED(-7, -4)) << 2) + ((SMOOTHED(4, 16) < SMOOTHED(3, -14)) << 1) + ((SMOOTHED(-3, 5) < SMOOTHED(-7, -12)) << 0));
-            desc[23] = (uchar)(((SMOOTHED(0, -4) < SMOOTHED(7, -5)) << 7) + ((SMOOTHED(-17, -9) < SMOOTHED(13, -7)) << 6) + ((SMOOTHED(22, -6) < SMOOTHED(-11, 5)) << 5) + ((SMOOTHED(2, -8) < SMOOTHED(23, -11)) << 4) + ((SMOOTHED(7, -10) < SMOOTHED(-1, 14)) << 3) + ((SMOOTHED(-3, -10) < SMOOTHED(8, 3)) << 2) + ((SMOOTHED(-13, 1) < SMOOTHED(-6, 0)) << 1) + ((SMOOTHED(-7, -21) < SMOOTHED(6, -14)) << 0));
-            desc[24] = (uchar)(((SMOOTHED(18, 19) < SMOOTHED(-4, -6)) << 7) + ((SMOOTHED(10, 7) < SMOOTHED(-1, -4)) << 6) + ((SMOOTHED(-1, 21) < SMOOTHED(1, -5)) << 5) + ((SMOOTHED(-10, 6) < SMOOTHED(-11, -2)) << 4) + ((SMOOTHED(18, -3) < SMOOTHED(-1, 7)) << 3) + ((SMOOTHED(-3, -9) < SMOOTHED(-5, 10)) << 2) + ((SMOOTHED(-13, 14) < SMOOTHED(17, -3)) << 1) + ((SMOOTHED(11, -19) < SMOOTHED(-1, -18)) << 0));
-            desc[25] = (uchar)(((SMOOTHED(8, -2) < SMOOTHED(-18, -23)) << 7) + ((SMOOTHED(0, -5) < SMOOTHED(-2, -9)) << 6) + ((SMOOTHED(-4, -11) < SMOOTHED(2, -8)) << 5) + ((SMOOTHED(14, 6) < SMOOTHED(-3, -6)) << 4) + ((SMOOTHED(-3, 0) < SMOOTHED(-15, 0)) << 3) + ((SMOOTHED(-9, 4) < SMOOTHED(-15, -9)) << 2) + ((SMOOTHED(-1, 11) < SMOOTHED(3, 11)) << 1) + ((SMOOTHED(-10, -16) < SMOOTHED(-7, 7)) << 0));
-            desc[26] = (uchar)(((SMOOTHED(-2, -10) < SMOOTHED(-10, -2)) << 7) + ((SMOOTHED(-5, -3) < SMOOTHED(5, -23)) << 6) + ((SMOOTHED(13, -8) < SMOOTHED(-15, -11)) << 5) + ((SMOOTHED(-15, 11) < SMOOTHED(6, -6)) << 4) + ((SMOOTHED(-16, -3) < SMOOTHED(-2, 2)) << 3) + ((SMOOTHED(6, 12) < SMOOTHED(-16, 24)) << 2) + ((SMOOTHED(-10, 0) < SMOOTHED(8, 11)) << 1) + ((SMOOTHED(-7, 7) < SMOOTHED(-19, -7)) << 0));
-            desc[27] = (uchar)(((SMOOTHED(5, 16) < SMOOTHED(9, -3)) << 7) + ((SMOOTHED(9, 7) < SMOOTHED(-7, -16)) << 6) + ((SMOOTHED(3, 2) < SMOOTHED(-10, 9)) << 5) + ((SMOOTHED(21, 1) < SMOOTHED(8, 7)) << 4) + ((SMOOTHED(7, 0) < SMOOTHED(1, 17)) << 3) + ((SMOOTHED(-8, 12) < SMOOTHED(9, 6)) << 2) + ((SMOOTHED(11, -7) < SMOOTHED(-8, -6)) << 1) + ((SMOOTHED(19, 0) < SMOOTHED(9, 3)) << 0));
-            desc[28] = (uchar)(((SMOOTHED(1, -7) < SMOOTHED(-5, -11)) << 7) + ((SMOOTHED(0, 8) < SMOOTHED(-2, 14)) << 6) + ((SMOOTHED(12, -2) < SMOOTHED(-15, -6)) << 5) + ((SMOOTHED(4, 12) < SMOOTHED(0, -21)) << 4) + ((SMOOTHED(17, -4) < SMOOTHED(-6, -7)) << 3) + ((SMOOTHED(-10, -9) < SMOOTHED(-14, -7)) << 2) + ((SMOOTHED(-15, -10) < SMOOTHED(-15, -14)) << 1) + ((SMOOTHED(-7, -5) < SMOOTHED(5, -12)) << 0));
-            desc[29] = (uchar)(((SMOOTHED(-4, 0) < SMOOTHED(15, -4)) << 7) + ((SMOOTHED(5, 2) < SMOOTHED(-6, -23)) << 6) + ((SMOOTHED(-4, -21) < SMOOTHED(-6, 4)) << 5) + ((SMOOTHED(-10, 5) < SMOOTHED(-15, 6)) << 4) + ((SMOOTHED(4, -3) < SMOOTHED(-1, 5)) << 3) + ((SMOOTHED(-4, 19) < SMOOTHED(-23, -4)) << 2) + ((SMOOTHED(-4, 17) < SMOOTHED(13, -11)) << 1) + ((SMOOTHED(1, 12) < SMOOTHED(4, -14)) << 0));
-            desc[30] = (uchar)(((SMOOTHED(-11, -6) < SMOOTHED(-20, 10)) << 7) + ((SMOOTHED(4, 5) < SMOOTHED(3, 20)) << 6) + ((SMOOTHED(-8, -20) < SMOOTHED(3, 1)) << 5) + ((SMOOTHED(-19, 9) < SMOOTHED(9, -3)) << 4) + ((SMOOTHED(18, 15) < SMOOTHED(11, -4)) << 3) + ((SMOOTHED(12, 16) < SMOOTHED(8, 7)) << 2) + ((SMOOTHED(-14, -8) < SMOOTHED(-3, 9)) << 1) + ((SMOOTHED(-6, 0) < SMOOTHED(2, -4)) << 0));
-            desc[31] = (uchar)(((SMOOTHED(1, -10) < SMOOTHED(-1, 2)) << 7) + ((SMOOTHED(8, -7) < SMOOTHED(-6, 18)) << 6) + ((SMOOTHED(9, 12) < SMOOTHED(-7, -23)) << 5) + ((SMOOTHED(8, -6) < SMOOTHED(5, 2)) << 4) + ((SMOOTHED(-9, 6) < SMOOTHED(-12, -7)) << 3) + ((SMOOTHED(-1, -2) < SMOOTHED(-7, 2)) << 2) + ((SMOOTHED(9, 9) < SMOOTHED(7, 15)) << 1) + ((SMOOTHED(6, 2) < SMOOTHED(-6, 6)) << 0));
-        #undef SMOOTHED
-
-        for(int k = 0; k < 32; k++){
-            descriptor_1.at<uchar>(i, k) = desc[k];
-        }
-    }
-    for(int i =0 ; i < keylist_2.size(); i++){
-        KeyPoint pt = keylist_2[i];
-        uchar desc[32];
-        #define SMOOTHED(y,x) smoothedSum(sum_2, pt, y, x)
-            desc[0] = (uchar)(((SMOOTHED(-2, -1) < SMOOTHED(7, -1)) << 7) + ((SMOOTHED(-14, -1) < SMOOTHED(-3, 3)) << 6) + ((SMOOTHED(1, -2) < SMOOTHED(11, 2)) << 5) + ((SMOOTHED(1, 6) < SMOOTHED(-10, -7)) << 4) + ((SMOOTHED(13, 2) < SMOOTHED(-1, 0)) << 3) + ((SMOOTHED(-14, 5) < SMOOTHED(5, -3)) << 2) + ((SMOOTHED(-2, 8) < SMOOTHED(2, 4)) << 1) + ((SMOOTHED(-11, 8) < SMOOTHED(-15, 5)) << 0));
-            desc[1] = (uchar)(((SMOOTHED(-6, -23) < SMOOTHED(8, -9)) << 7) + ((SMOOTHED(-12, 6) < SMOOTHED(-10, 8)) << 6) + ((SMOOTHED(-3, -1) < SMOOTHED(8, 1)) << 5) + ((SMOOTHED(3, 6) < SMOOTHED(5, 6)) << 4) + ((SMOOTHED(-7, -6) < SMOOTHED(5, -5)) << 3) + ((SMOOTHED(22, -2) < SMOOTHED(-11, -8)) << 2) + ((SMOOTHED(14, 7) < SMOOTHED(8, 5)) << 1) + ((SMOOTHED(-1, 14) < SMOOTHED(-5, -14)) << 0));
-            desc[2] = (uchar)(((SMOOTHED(-14, 9) < SMOOTHED(2, 0)) << 7) + ((SMOOTHED(7, -3) < SMOOTHED(22, 6)) << 6) + ((SMOOTHED(-6, 6) < SMOOTHED(-8, -5)) << 5) + ((SMOOTHED(-5, 9) < SMOOTHED(7, -1)) << 4) + ((SMOOTHED(-3, -7) < SMOOTHED(-10, -18)) << 3) + ((SMOOTHED(4, -5) < SMOOTHED(0, 11)) << 2) + ((SMOOTHED(2, 3) < SMOOTHED(9, 10)) << 1) + ((SMOOTHED(-10, 3) < SMOOTHED(4, 9)) << 0));
-            desc[3] = (uchar)(((SMOOTHED(0, 12) < SMOOTHED(-3, 19)) << 7) + ((SMOOTHED(1, 15) < SMOOTHED(-11, -5)) << 6) + ((SMOOTHED(14, -1) < SMOOTHED(7, 8)) << 5) + ((SMOOTHED(7, -23) < SMOOTHED(-5, 5)) << 4) + ((SMOOTHED(0, -6) < SMOOTHED(-10, 17)) << 3) + ((SMOOTHED(13, -4) < SMOOTHED(-3, -4)) << 2) + ((SMOOTHED(-12, 1) < SMOOTHED(-12, 2)) << 1) + ((SMOOTHED(0, 8) < SMOOTHED(3, 22)) << 0));
-            desc[4] = (uchar)(((SMOOTHED(-13, 13) < SMOOTHED(3, -1)) << 7) + ((SMOOTHED(-16, 17) < SMOOTHED(6, 10)) << 6) + ((SMOOTHED(7, 15) < SMOOTHED(-5, 0)) << 5) + ((SMOOTHED(2, -12) < SMOOTHED(19, -2)) << 4) + ((SMOOTHED(3, -6) < SMOOTHED(-4, -15)) << 3) + ((SMOOTHED(8, 3) < SMOOTHED(0, 14)) << 2) + ((SMOOTHED(4, -11) < SMOOTHED(5, 5)) << 1) + ((SMOOTHED(11, -7) < SMOOTHED(7, 1)) << 0));
-            desc[5] = (uchar)(((SMOOTHED(6, 12) < SMOOTHED(21, 3)) << 7) + ((SMOOTHED(-3, 2) < SMOOTHED(14, 1)) << 6) + ((SMOOTHED(5, 1) < SMOOTHED(-5, 11)) << 5) + ((SMOOTHED(3, -17) < SMOOTHED(-6, 2)) << 4) + ((SMOOTHED(6, 8) < SMOOTHED(5, -10)) << 3) + ((SMOOTHED(-14, -2) < SMOOTHED(0, 4)) << 2) + ((SMOOTHED(5, -7) < SMOOTHED(-6, 5)) << 1) + ((SMOOTHED(10, 4) < SMOOTHED(4, -7)) << 0));
-            desc[6] = (uchar)(((SMOOTHED(22, 0) < SMOOTHED(7, -18)) << 7) + ((SMOOTHED(-1, -3) < SMOOTHED(0, 18)) << 6) + ((SMOOTHED(-4, 22) < SMOOTHED(-5, 3)) << 5) + ((SMOOTHED(1, -7) < SMOOTHED(2, -3)) << 4) + ((SMOOTHED(19, -20) < SMOOTHED(17, -2)) << 3) + ((SMOOTHED(3, -10) < SMOOTHED(-8, 24)) << 2) + ((SMOOTHED(-5, -14) < SMOOTHED(7, 5)) << 1) + ((SMOOTHED(-2, 12) < SMOOTHED(-4, -15)) << 0));
-            desc[7] = (uchar)(((SMOOTHED(4, 12) < SMOOTHED(0, -19)) << 7) + ((SMOOTHED(20, 13) < SMOOTHED(3, 5)) << 6) + ((SMOOTHED(-8, -12) < SMOOTHED(5, 0)) << 5) + ((SMOOTHED(-5, 6) < SMOOTHED(-7, -11)) << 4) + ((SMOOTHED(6, -11) < SMOOTHED(-3, -22)) << 3) + ((SMOOTHED(15, 4) < SMOOTHED(10, 1)) << 2) + ((SMOOTHED(-7, -4) < SMOOTHED(15, -6)) << 1) + ((SMOOTHED(5, 10) < SMOOTHED(0, 24)) << 0));
-            desc[8] = (uchar)(((SMOOTHED(3, 6) < SMOOTHED(22, -2)) << 7) + ((SMOOTHED(-13, 14) < SMOOTHED(4, -4)) << 6) + ((SMOOTHED(-13, 8) < SMOOTHED(-18, -22)) << 5) + ((SMOOTHED(-1, -1) < SMOOTHED(-7, 3)) << 4) + ((SMOOTHED(-19, -12) < SMOOTHED(4, 3)) << 3) + ((SMOOTHED(8, 10) < SMOOTHED(13, -2)) << 2) + ((SMOOTHED(-6, -1) < SMOOTHED(-6, -5)) << 1) + ((SMOOTHED(2, -21) < SMOOTHED(-3, 2)) << 0));
-            desc[9] = (uchar)(((SMOOTHED(4, -7) < SMOOTHED(0, 16)) << 7) + ((SMOOTHED(-6, -5) < SMOOTHED(-12, -1)) << 6) + ((SMOOTHED(1, -1) < SMOOTHED(9, 18)) << 5) + ((SMOOTHED(-7, 10) < SMOOTHED(-11, 6)) << 4) + ((SMOOTHED(4, 3) < SMOOTHED(19, -7)) << 3) + ((SMOOTHED(-18, 5) < SMOOTHED(-4, 5)) << 2) + ((SMOOTHED(4, 0) < SMOOTHED(-20, 4)) << 1) + ((SMOOTHED(7, -11) < SMOOTHED(18, 12)) << 0));
-            desc[10] = (uchar)(((SMOOTHED(-20, 17) < SMOOTHED(-18, 7)) << 7) + ((SMOOTHED(2, 15) < SMOOTHED(19, -11)) << 6) + ((SMOOTHED(-18, 6) < SMOOTHED(-7, 3)) << 5) + ((SMOOTHED(-4, 1) < SMOOTHED(-14, 13)) << 4) + ((SMOOTHED(17, 3) < SMOOTHED(2, -8)) << 3) + ((SMOOTHED(-7, 2) < SMOOTHED(1, 6)) << 2) + ((SMOOTHED(17, -9) < SMOOTHED(-2, 8)) << 1) + ((SMOOTHED(-8, -6) < SMOOTHED(-1, 12)) << 0));
-            desc[11] = (uchar)(((SMOOTHED(-2, 4) < SMOOTHED(-1, 6)) << 7) + ((SMOOTHED(-2, 7) < SMOOTHED(6, 8)) << 6) + ((SMOOTHED(-8, -1) < SMOOTHED(-7, -9)) << 5) + ((SMOOTHED(8, -9) < SMOOTHED(15, 0)) << 4) + ((SMOOTHED(0, 22) < SMOOTHED(-4, -15)) << 3) + ((SMOOTHED(-14, -1) < SMOOTHED(3, -2)) << 2) + ((SMOOTHED(-7, -4) < SMOOTHED(17, -7)) << 1) + ((SMOOTHED(-8, -2) < SMOOTHED(9, -4)) << 0));
-            desc[12] = (uchar)(((SMOOTHED(5, -7) < SMOOTHED(7, 7)) << 7) + ((SMOOTHED(-5, 13) < SMOOTHED(-8, 11)) << 6) + ((SMOOTHED(11, -4) < SMOOTHED(0, 8)) << 5) + ((SMOOTHED(5, -11) < SMOOTHED(-9, -6)) << 4) + ((SMOOTHED(2, -6) < SMOOTHED(3, -20)) << 3) + ((SMOOTHED(-6, 2) < SMOOTHED(6, 10)) << 2) + ((SMOOTHED(-6, -6) < SMOOTHED(-15, 7)) << 1) + ((SMOOTHED(-6, -3) < SMOOTHED(2, 1)) << 0));
-            desc[13] = (uchar)(((SMOOTHED(11, 0) < SMOOTHED(-3, 2)) << 7) + ((SMOOTHED(7, -12) < SMOOTHED(14, 5)) << 6) + ((SMOOTHED(0, -7) < SMOOTHED(-1, -1)) << 5) + ((SMOOTHED(-16, 0) < SMOOTHED(6, 8)) << 4) + ((SMOOTHED(22, 11) < SMOOTHED(0, -3)) << 3) + ((SMOOTHED(19, 0) < SMOOTHED(5, -17)) << 2) + ((SMOOTHED(-23, -14) < SMOOTHED(-13, -19)) << 1) + ((SMOOTHED(-8, 10) < SMOOTHED(-11, -2)) << 0));
-            desc[14] = (uchar)(((SMOOTHED(-11, 6) < SMOOTHED(-10, 13)) << 7) + ((SMOOTHED(1, -7) < SMOOTHED(14, 0)) << 6) + ((SMOOTHED(-12, 1) < SMOOTHED(-5, -5)) << 5) + ((SMOOTHED(4, 7) < SMOOTHED(8, -1)) << 4) + ((SMOOTHED(-1, -5) < SMOOTHED(15, 2)) << 3) + ((SMOOTHED(-3, -1) < SMOOTHED(7, -10)) << 2) + ((SMOOTHED(3, -6) < SMOOTHED(10, -18)) << 1) + ((SMOOTHED(-7, -13) < SMOOTHED(-13, 10)) << 0));
-            desc[15] = (uchar)(((SMOOTHED(1, -1) < SMOOTHED(13, -10)) << 7) + ((SMOOTHED(-19, 14) < SMOOTHED(8, -14)) << 6) + ((SMOOTHED(-4, -13) < SMOOTHED(7, 1)) << 5) + ((SMOOTHED(1, -2) < SMOOTHED(12, -7)) << 4) + ((SMOOTHED(3, -5) < SMOOTHED(1, -5)) << 3) + ((SMOOTHED(-2, -2) < SMOOTHED(8, -10)) << 2) + ((SMOOTHED(2, 14) < SMOOTHED(8, 7)) << 1) + ((SMOOTHED(3, 9) < SMOOTHED(8, 2)) << 0));
-            desc[16] = (uchar)(((SMOOTHED(-9, 1) < SMOOTHED(-18, 0)) << 7) + ((SMOOTHED(4, 0) < SMOOTHED(1, 12)) << 6) + ((SMOOTHED(0, 9) < SMOOTHED(-14, -10)) << 5) + ((SMOOTHED(-13, -9) < SMOOTHED(-2, 6)) << 4) + ((SMOOTHED(1, 5) < SMOOTHED(10, 10)) << 3) + ((SMOOTHED(-3, -6) < SMOOTHED(-16, -5)) << 2) + ((SMOOTHED(11, 6) < SMOOTHED(-5, 0)) << 1) + ((SMOOTHED(-23, 10) < SMOOTHED(1, 2)) << 0));
-            desc[17] = (uchar)(((SMOOTHED(13, -5) < SMOOTHED(-3, 9)) << 7) + ((SMOOTHED(-4, -1) < SMOOTHED(-13, -5)) << 6) + ((SMOOTHED(10, 13) < SMOOTHED(-11, 8)) << 5) + ((SMOOTHED(19, 20) < SMOOTHED(-9, 2)) << 4) + ((SMOOTHED(4, -8) < SMOOTHED(0, -9)) << 3) + ((SMOOTHED(-14, 10) < SMOOTHED(15, 19)) << 2) + ((SMOOTHED(-14, -12) < SMOOTHED(-10, -3)) << 1) + ((SMOOTHED(-23, -3) < SMOOTHED(17, -2)) << 0));
-            desc[18] = (uchar)(((SMOOTHED(-3, -11) < SMOOTHED(6, -14)) << 7) + ((SMOOTHED(19, -2) < SMOOTHED(-4, 2)) << 6) + ((SMOOTHED(-5, 5) < SMOOTHED(3, -13)) << 5) + ((SMOOTHED(2, -2) < SMOOTHED(-5, 4)) << 4) + ((SMOOTHED(17, 4) < SMOOTHED(17, -11)) << 3) + ((SMOOTHED(-7, -2) < SMOOTHED(1, 23)) << 2) + ((SMOOTHED(8, 13) < SMOOTHED(1, -16)) << 1) + ((SMOOTHED(-13, -5) < SMOOTHED(1, -17)) << 0));
-            desc[19] = (uchar)(((SMOOTHED(4, 6) < SMOOTHED(-8, -3)) << 7) + ((SMOOTHED(-5, -9) < SMOOTHED(-2, -10)) << 6) + ((SMOOTHED(-9, 0) < SMOOTHED(-7, -2)) << 5) + ((SMOOTHED(5, 0) < SMOOTHED(5, 2)) << 4) + ((SMOOTHED(-4, -16) < SMOOTHED(6, 3)) << 3) + ((SMOOTHED(2, -15) < SMOOTHED(-2, 12)) << 2) + ((SMOOTHED(4, -1) < SMOOTHED(6, 2)) << 1) + ((SMOOTHED(1, 1) < SMOOTHED(-2, -8)) << 0));
-            desc[20] = (uchar)(((SMOOTHED(-2, 12) < SMOOTHED(-5, -2)) << 7) + ((SMOOTHED(-8, 8) < SMOOTHED(-9, 9)) << 6) + ((SMOOTHED(2, -10) < SMOOTHED(3, 1)) << 5) + ((SMOOTHED(-4, 10) < SMOOTHED(-9, 4)) << 4) + ((SMOOTHED(6, 12) < SMOOTHED(2, 5)) << 3) + ((SMOOTHED(-3, -8) < SMOOTHED(0, 5)) << 2) + ((SMOOTHED(-13, 1) < SMOOTHED(-7, 2)) << 1) + ((SMOOTHED(-1, -10) < SMOOTHED(7, -18)) << 0));
-            desc[21] = (uchar)(((SMOOTHED(-1, 8) < SMOOTHED(-9, -10)) << 7) + ((SMOOTHED(-23, -1) < SMOOTHED(6, 2)) << 6) + ((SMOOTHED(-5, -3) < SMOOTHED(3, 2)) << 5) + ((SMOOTHED(0, 11) < SMOOTHED(-4, -7)) << 4) + ((SMOOTHED(15, 2) < SMOOTHED(-10, -3)) << 3) + ((SMOOTHED(-20, -8) < SMOOTHED(-13, 3)) << 2) + ((SMOOTHED(-19, -12) < SMOOTHED(5, -11)) << 1) + ((SMOOTHED(-17, -13) < SMOOTHED(-3, 2)) << 0));
-            desc[22] = (uchar)(((SMOOTHED(7, 4) < SMOOTHED(-12, 0)) << 7) + ((SMOOTHED(5, -1) < SMOOTHED(-14, -6)) << 6) + ((SMOOTHED(-4, 11) < SMOOTHED(0, -4)) << 5) + ((SMOOTHED(3, 10) < SMOOTHED(7, -3)) << 4) + ((SMOOTHED(13, 21) < SMOOTHED(-11, 6)) << 3) + ((SMOOTHED(-12, 24) < SMOOTHED(-7, -4)) << 2) + ((SMOOTHED(4, 16) < SMOOTHED(3, -14)) << 1) + ((SMOOTHED(-3, 5) < SMOOTHED(-7, -12)) << 0));
-            desc[23] = (uchar)(((SMOOTHED(0, -4) < SMOOTHED(7, -5)) << 7) + ((SMOOTHED(-17, -9) < SMOOTHED(13, -7)) << 6) + ((SMOOTHED(22, -6) < SMOOTHED(-11, 5)) << 5) + ((SMOOTHED(2, -8) < SMOOTHED(23, -11)) << 4) + ((SMOOTHED(7, -10) < SMOOTHED(-1, 14)) << 3) + ((SMOOTHED(-3, -10) < SMOOTHED(8, 3)) << 2) + ((SMOOTHED(-13, 1) < SMOOTHED(-6, 0)) << 1) + ((SMOOTHED(-7, -21) < SMOOTHED(6, -14)) << 0));
-            desc[24] = (uchar)(((SMOOTHED(18, 19) < SMOOTHED(-4, -6)) << 7) + ((SMOOTHED(10, 7) < SMOOTHED(-1, -4)) << 6) + ((SMOOTHED(-1, 21) < SMOOTHED(1, -5)) << 5) + ((SMOOTHED(-10, 6) < SMOOTHED(-11, -2)) << 4) + ((SMOOTHED(18, -3) < SMOOTHED(-1, 7)) << 3) + ((SMOOTHED(-3, -9) < SMOOTHED(-5, 10)) << 2) + ((SMOOTHED(-13, 14) < SMOOTHED(17, -3)) << 1) + ((SMOOTHED(11, -19) < SMOOTHED(-1, -18)) << 0));
-            desc[25] = (uchar)(((SMOOTHED(8, -2) < SMOOTHED(-18, -23)) << 7) + ((SMOOTHED(0, -5) < SMOOTHED(-2, -9)) << 6) + ((SMOOTHED(-4, -11) < SMOOTHED(2, -8)) << 5) + ((SMOOTHED(14, 6) < SMOOTHED(-3, -6)) << 4) + ((SMOOTHED(-3, 0) < SMOOTHED(-15, 0)) << 3) + ((SMOOTHED(-9, 4) < SMOOTHED(-15, -9)) << 2) + ((SMOOTHED(-1, 11) < SMOOTHED(3, 11)) << 1) + ((SMOOTHED(-10, -16) < SMOOTHED(-7, 7)) << 0));
-            desc[26] = (uchar)(((SMOOTHED(-2, -10) < SMOOTHED(-10, -2)) << 7) + ((SMOOTHED(-5, -3) < SMOOTHED(5, -23)) << 6) + ((SMOOTHED(13, -8) < SMOOTHED(-15, -11)) << 5) + ((SMOOTHED(-15, 11) < SMOOTHED(6, -6)) << 4) + ((SMOOTHED(-16, -3) < SMOOTHED(-2, 2)) << 3) + ((SMOOTHED(6, 12) < SMOOTHED(-16, 24)) << 2) + ((SMOOTHED(-10, 0) < SMOOTHED(8, 11)) << 1) + ((SMOOTHED(-7, 7) < SMOOTHED(-19, -7)) << 0));
-            desc[27] = (uchar)(((SMOOTHED(5, 16) < SMOOTHED(9, -3)) << 7) + ((SMOOTHED(9, 7) < SMOOTHED(-7, -16)) << 6) + ((SMOOTHED(3, 2) < SMOOTHED(-10, 9)) << 5) + ((SMOOTHED(21, 1) < SMOOTHED(8, 7)) << 4) + ((SMOOTHED(7, 0) < SMOOTHED(1, 17)) << 3) + ((SMOOTHED(-8, 12) < SMOOTHED(9, 6)) << 2) + ((SMOOTHED(11, -7) < SMOOTHED(-8, -6)) << 1) + ((SMOOTHED(19, 0) < SMOOTHED(9, 3)) << 0));
-            desc[28] = (uchar)(((SMOOTHED(1, -7) < SMOOTHED(-5, -11)) << 7) + ((SMOOTHED(0, 8) < SMOOTHED(-2, 14)) << 6) + ((SMOOTHED(12, -2) < SMOOTHED(-15, -6)) << 5) + ((SMOOTHED(4, 12) < SMOOTHED(0, -21)) << 4) + ((SMOOTHED(17, -4) < SMOOTHED(-6, -7)) << 3) + ((SMOOTHED(-10, -9) < SMOOTHED(-14, -7)) << 2) + ((SMOOTHED(-15, -10) < SMOOTHED(-15, -14)) << 1) + ((SMOOTHED(-7, -5) < SMOOTHED(5, -12)) << 0));
-            desc[29] = (uchar)(((SMOOTHED(-4, 0) < SMOOTHED(15, -4)) << 7) + ((SMOOTHED(5, 2) < SMOOTHED(-6, -23)) << 6) + ((SMOOTHED(-4, -21) < SMOOTHED(-6, 4)) << 5) + ((SMOOTHED(-10, 5) < SMOOTHED(-15, 6)) << 4) + ((SMOOTHED(4, -3) < SMOOTHED(-1, 5)) << 3) + ((SMOOTHED(-4, 19) < SMOOTHED(-23, -4)) << 2) + ((SMOOTHED(-4, 17) < SMOOTHED(13, -11)) << 1) + ((SMOOTHED(1, 12) < SMOOTHED(4, -14)) << 0));
-            desc[30] = (uchar)(((SMOOTHED(-11, -6) < SMOOTHED(-20, 10)) << 7) + ((SMOOTHED(4, 5) < SMOOTHED(3, 20)) << 6) + ((SMOOTHED(-8, -20) < SMOOTHED(3, 1)) << 5) + ((SMOOTHED(-19, 9) < SMOOTHED(9, -3)) << 4) + ((SMOOTHED(18, 15) < SMOOTHED(11, -4)) << 3) + ((SMOOTHED(12, 16) < SMOOTHED(8, 7)) << 2) + ((SMOOTHED(-14, -8) < SMOOTHED(-3, 9)) << 1) + ((SMOOTHED(-6, 0) < SMOOTHED(2, -4)) << 0));
-            desc[31] = (uchar)(((SMOOTHED(1, -10) < SMOOTHED(-1, 2)) << 7) + ((SMOOTHED(8, -7) < SMOOTHED(-6, 18)) << 6) + ((SMOOTHED(9, 12) < SMOOTHED(-7, -23)) << 5) + ((SMOOTHED(8, -6) < SMOOTHED(5, 2)) << 4) + ((SMOOTHED(-9, 6) < SMOOTHED(-12, -7)) << 3) + ((SMOOTHED(-1, -2) < SMOOTHED(-7, 2)) << 2) + ((SMOOTHED(9, 9) < SMOOTHED(7, 15)) << 1) + ((SMOOTHED(6, 2) < SMOOTHED(-6, 6)) << 0));
-        #undef SMOOTHED
-
-        for(int k = 0; k < 32; k++){
-            descriptor_2.at<uchar>(i, k) = desc[k];
-        }
-    }
-}
-
-
 
 bool response_comparator(const KeyPoint& p1, const KeyPoint& p2)
 {
@@ -122,7 +21,7 @@ bool response_comparator(const KeyPoint& p1, const KeyPoint& p2)
     return 0;
 }
 
-MYORB::MYORB( int N, int t , int op, int st, int et, int kn, int mt, int l, float sf, Mat img1, Mat img2){
+MYORB::MYORB( int N, int t , int op, int st, int et, int kn, int mt, int l, float sf, Mat img1, Mat img2, bool D = false, bool F = false, bool T = false){
     // parameters
     FAST_N = N;
     FAST_threshold = t;
@@ -135,9 +34,27 @@ MYORB::MYORB( int N, int t , int op, int st, int et, int kn, int mt, int l, floa
     FAST_nlevels = l;
     FAST_scaling = sf;
 
+    // bool 
+    DISPLAY = D;
+    FIXED = F;
+    TESTBENCH = T; 
+
     // outfile
-    outfile_name = "../result.txt";
+    outfile_name = "../result/result.txt";
     outfile.open(outfile_name, ios::out);
+
+    // result
+    if(TESTBENCH){
+        result_test.open("../result/result_test.txt", ios::out);
+        result_NMS.open("../result/result_NMS.txt", ios::out);
+        result_coordinates.open("../result/result_coordinates.txt", ios::out);
+        result_mx.open("../result/result_mx.txt", ios::out);
+        result_my.open("../result/result_my.txt", ios::out);
+        result_score.open("../result/result_score.txt", ios::out);
+        read.open("../result/read.txt", ios::out);
+        pixel_in.open("../result/pixel_in.txt", ios::out);
+        pixel_smooth.open("../result/pixel_smooth.txt", ios::out);
+    }
 
     // img1
     img_1 = img1;
@@ -159,11 +76,11 @@ vector<DMatch> MYORB::Matching(){
     FAST_detector(1);
     FAST_detector(2);
 
-    // cout << keylist_1.size() << endl;
-    sort(keylist_1.begin(), keylist_1.end(), response_comparator);
-    // sort(keylist_2.begin(), keylist_2.end(), response_comparator);
-    while (keylist_1.size() > keypoints_num) keylist_1.pop_back();
-    // while (keylist_2.size() > keypoints_num) keylist_2.pop_back();
+    vector<KeyPoint> temp = keylist_1;
+    sort(temp.begin(), temp.end(), response_comparator);
+    while (temp.size() > keypoints_num) temp.pop_back();
+    min_thres = int(temp[-1].response);
+    
     // smoothing the image
     BRIEF_smoothing();
 
@@ -174,6 +91,17 @@ vector<DMatch> MYORB::Matching(){
     BRIEF_descriptor(1);
     BRIEF_descriptor(2);
     // BRIEF_descriptor_old();
+
+    if(TESTBENCH){
+        for (int i = 0; i < keylist_1.size(); i++){
+            read << hex << setw(3) << setfill('0') <<  int(keylist_1[i].pt.x)  << " " << setw(3) << setfill('0') << int(keylist_1[i].pt.y) << " ";
+            read << setw(2) << int(smth_1.at<uchar>(int(keylist_1[i].pt.y), int(keylist_1[i].pt.x))) << " ";
+            for (int j = 0; j < 32; j++){
+                read << bitset<8>(descriptor_1.at<uchar>(i, j));
+            }
+            read << endl;
+        }
+    }
 
 
     // default descriptor
@@ -188,6 +116,10 @@ vector<DMatch> MYORB::Matching(){
     // Optimize the matches
     // cout << "Optimize matches..." << endl;
     MATCH_optimization();
+
+    if(DISPLAY){
+        DISPLAY_matches();
+    }
 
     return good_matches;
 
@@ -214,14 +146,15 @@ void MYORB::DISPLAY_image_with_keypoints(Mat& image, vector<KeyPoint>& key_list,
 
 void MYORB::DISPLAY_matches(){
     Mat img_match;
-    cout << "all matching pair" << endl;
+    // cout << "all matching pair" << endl;
     drawMatches(img_2, keylist_2, img_1, keylist_1, matches, img_match);
     imshow ( "all matching pair", img_match );
 
     Mat img_goodmatch;
-    cout << "optimized matching pair" << endl;
+    // cout << "optimized matching pair" << endl;
     drawMatches(img_2, keylist_2, img_1, keylist_1, good_matches, img_goodmatch);
     imshow ( "optimized matching pair", img_goodmatch );
+    waitKey(0);
 }
 
 int MYORB::FAST_consecutive1_finder(vector<int>& array){
@@ -290,6 +223,9 @@ void MYORB::FAST_detector(int option){
         int p_center;
         Mat score(img.rows, img.cols, CV_8UC1, Scalar(0));
         Mat key(img.rows, img.cols, CV_8UC1, Scalar(0));
+        Mat reserved(img.rows, img.cols, CV_8UC1, Scalar(0));
+        Mat cos(img.rows, img.cols, CV_32SC1, Scalar(0));
+        Mat sin(img.rows, img.cols, CV_32SC1, Scalar(0));
         Mat orient(img.rows, img.cols, CV_64FC1, Scalar(0));
 
         vector<KeyPoint> candidate;
@@ -302,8 +238,10 @@ void MYORB::FAST_detector(int option){
                 key.at<uchar>(i, j) = 0;
                 score.at<uchar>(i, j) = 0;
                 orient.at<float>(i, j) = 0;
+                cos.at<int>(i, j) = 0;
+                sin.at<int>(i, j) = 0;
 
-                if (i < FAST_edgethreshold || j < FAST_edgethreshold || i > img.rows - FAST_edgethreshold || j > img.cols - FAST_edgethreshold)
+                if (i < 4 || j < 4 || i > img.rows - 4 || j > img.cols - 4)
                     continue;
 
                 // FAST-N
@@ -365,56 +303,129 @@ void MYORB::FAST_detector(int option){
                             local_threshold = abs(p_double[k + s] - p_center);
                     }
                     if (local_threshold > score_temp){
-                        orient.at<uchar>(i, j) = k;
+                        // orient.at<uchar>(i, j) = k;
                         score_temp = local_threshold;
                     }
                 }
-                score.at<uchar>(i, j) = score_temp == 0 ? 0 : score_temp - 1;
+                // score.at<uchar>(i, j) = score_temp == 0 ? 0 : score_temp - 1;
+                score.at<uchar>(i, j) = score_temp;
 
                 // Orientation
                 int x_sum = 0;
                 int y_sum = 0;
+                
                 for(int x = -3; x < 4; x++ ){
                     for(int y = -3; y < 4; y++){
-                        x_sum += x*(int)img.at<uchar>(i, j+x);
-                        y_sum += y*(int)img.at<uchar>(i+y, j);
+                        // if(i == 34 && j== 137) cout << (int)img.at<uchar>(i+y, j+x) << endl;
+                        x_sum += x*(int)img.at<uchar>(i+y, j+x);
+                        y_sum += y*(int)img.at<uchar>(i+y, j+x);
                     }
                 }
+
                 orient.at<float>(i, j) = atan2(y_sum, x_sum);
-                
+                // cout << (1024 * x_sum) / int(sqrt(x_sum*x_sum + y_sum*y_sum)) << endl;
+                int denominator = int(sqrt(x_sum*x_sum + y_sum*y_sum));
+
+                if(denominator != 0){
+                    cos.at<int>(i, j) = (1024 * x_sum) / denominator;
+                    sin.at<int>(i, j) = (1024 * y_sum) / denominator;
+                }
 
             }
         }
+
+        // if(level == 0 && option == 1){
+        //     for (int i = 0; i < img.rows; i++) {
+        //         for (int j = 0; j < img.cols; j++) {
+        //             result_test << int(key.at<uchar>(i, j)) << endl;
+        //         }
+        //     }
+        // }
         
         // Non-maximal suppression
         // cout << "test" << endl;
-        for (int i = FAST_edgethreshold; i < (img.rows - FAST_edgethreshold); i++) {
-            for (int j = FAST_edgethreshold; j < (img.cols - FAST_edgethreshold); j++) {
+        for (int i = 0; i < img.rows; i++) {
+            for (int j = 0; j < img.cols; j++) {
+                if (i < FAST_edgethreshold || j < FAST_edgethreshold || i > img.rows - FAST_edgethreshold || j > img.cols - FAST_edgethreshold){
+                    reserved.at<uchar>(i, j) = 0;
+                    continue;
+                }
+                // if(i == 37 && j == 136){
+                //     cout << hex << int(score.at<uchar>(i-1, j-1)) << " ";
+                //     cout << hex << int(score.at<uchar>(i-1, j)) << " ";
+                //     cout << hex << int(score.at<uchar>(i-1, j+1)) << " ";
+                //     cout << hex << int(score.at<uchar>(i, j-1)) << " ";
+                //     cout << hex << int(score.at<uchar>(i, j)) << " ";
+                //     cout << hex << int(score.at<uchar>(i, j+1)) << " ";
+                //     cout << hex << int(score.at<uchar>(i+1, j-1)) << " ";
+                //     cout << hex << int(score.at<uchar>(i+1, j)) << " ";
+                //     cout << hex << int(score.at<uchar>(i+1, j+1)) << " " << endl;
+                //     bool a = int(score.at<uchar>(i, j)) > int(score.at<uchar>(i-1, j+1));
+                //     bool b = int(key.at<uchar>(i-1, j+1)) == 0;
+                //     cout << a <<" "<< b<<" " << (a || b) << endl;
+                // }
                 if (key.at<uchar>(i, j) == 1 // keypoint candidate
-                    && (int(score.at<uchar>(i, j)) > int(score.at<uchar>(i-1, j-1)) || key.at<uchar>(i-1, j-1) == 0)
-                    && (int(score.at<uchar>(i, j)) > int(score.at<uchar>(i+0, j-1)) || key.at<uchar>(i+0, j-1) == 0)
-                    && (int(score.at<uchar>(i, j)) > int(score.at<uchar>(i+1, j-1)) || key.at<uchar>(i+1, j-1) == 0)
-                    && (int(score.at<uchar>(i, j)) > int(score.at<uchar>(i-1, j+0)) || key.at<uchar>(i-1, j+0) == 0)
-                    && (int(score.at<uchar>(i, j)) > int(score.at<uchar>(i+1, j+0)) || key.at<uchar>(i+1, j+0) == 0)
-                    && (int(score.at<uchar>(i, j)) > int(score.at<uchar>(i-1, j+1)) || key.at<uchar>(i-1, j+1) == 0)
-                    && (int(score.at<uchar>(i, j)) > int(score.at<uchar>(i+0, j+1)) || key.at<uchar>(i+0, j+1) == 0)
-                    && (int(score.at<uchar>(i, j)) > int(score.at<uchar>(i+1, j+1)) || key.at<uchar>(i+1, j+1) == 0)
+                    && (int(score.at<uchar>(i, j)) > int(score.at<uchar>(i-1, j-1)) || int(key.at<uchar>(i-1, j-1)) == 0)
+                    && (int(score.at<uchar>(i, j)) > int(score.at<uchar>(i+0, j-1)) || int(key.at<uchar>(i+0, j-1)) == 0)
+                    && (int(score.at<uchar>(i, j)) > int(score.at<uchar>(i+1, j-1)) || int(key.at<uchar>(i+1, j-1)) == 0)
+                    && (int(score.at<uchar>(i, j)) > int(score.at<uchar>(i-1, j+0)) || int(key.at<uchar>(i-1, j+0)) == 0)
+                    && (int(score.at<uchar>(i, j)) > int(score.at<uchar>(i+1, j+0)) || int(key.at<uchar>(i+1, j+0)) == 0)
+                    && (int(score.at<uchar>(i, j)) > int(score.at<uchar>(i-1, j+1)) || int(key.at<uchar>(i-1, j+1)) == 0)
+                    && (int(score.at<uchar>(i, j)) > int(score.at<uchar>(i+0, j+1)) || int(key.at<uchar>(i+0, j+1)) == 0)
+                    && (int(score.at<uchar>(i, j)) > int(score.at<uchar>(i+1, j+1)) || int(key.at<uchar>(i+1, j+1)) == 0)
                     ){
+                    reserved.at<uchar>(i, j) = 1;
                     // Remember to convert the coordinates back to original coordinates
                     int power = int(pow(2, level));
                     // cout << "add keypoints: (" << j*power << ", " << i*power << ")" << endl;
-                    KeyPoint temp = KeyPoint(Point2f(j*power, i*power), 1, orient.at<uchar>(i, j), int(score.at<uchar>(i, j)), 0, -1);
-                    
+                    KeyPoint temp = KeyPoint(Point2f(j*power, i*power), 1, orient.at<float>(i, j), int(score.at<uchar>(i, j)), 0, -1);
+                    // cout << j << " " << i << " " << temp.pt.x << " " << temp.pt.y << endl;
+                    // cout << cos << " " << sin << endl;
                     if(option == 1){
                         // if(keylist_1.size() < keypoints_num)
                         keylist_1.push_back(temp);
-
+                        cos_1.push_back(cos.at<int>(i, j));
+                        sin_1.push_back(sin.at<int>(i, j));
+                    
                     }
                     else if(option == 2){
                         // if(keylist_2.size() < keypoints_num)
                         keylist_2.push_back(temp);
+                        cos_2.push_back(cos.at<int>(i, j));
+                        sin_2.push_back(sin.at<int>(i, j));
 
                     }
+                }
+            }
+        }
+
+        // cout << int(key.at<uchar>(37, 136)) << endl;
+
+        // output to files (for testbench usage)
+        if(level == 0 && option == 1){
+            for (int i = 0; i < img.rows; i++) {
+                for (int j = 0; j < img.cols; j++) {
+                    // result_NMS << int(reserved.at<uchar>(i, j)) << endl;
+                    // result_coordinates << hex << i << " " << j << endl;
+                    // result_score << hex << int(score.at<uchar>(i, j)) << endl;
+                    // result_mx << hex << mx.at<int>(i, j) << endl;
+                    // result_my << hex << my.at<int>(i, j) << endl;
+                    pixel_in << hex << (int)img.at<uchar>(i, j) << endl;
+                    
+        //             if(int(reserved.at<uchar>(i, j)) == 1){
+        //                 read << hex << setw(3) << setfill('0') <<  j  << " " << setw(3) << setfill('0') << i << " ";
+        //                 read << setw(2) << int(score.at<uchar>(i, j)) << " ";
+        //                 int x = mx.at<int>(i, j);
+        //                 int y = my.at<int>(i, j);
+        //                 if(j == 137 && i == 34){
+        //                     cout << "haha" << endl;
+        //                     cout << x << " " << y << endl;
+        //                 }
+
+        //                 read << dec << 1024*x/(int)sqrt(x*x+y*y) << " ";
+        //                 read << dec << 1024*y/(int)sqrt(x*x+y*y) << " ";
+        //                 read << endl;
+        //             }
                 }
             }
         }
@@ -430,23 +441,36 @@ void MYORB::BRIEF_smoothing(){
     filter2D(img_1, smth_1, -1, kernel);
     filter2D(img_2, smth_2, -1, kernel);
 
+
+    if(TESTBENCH){
+        for (int i = 0; i < smth_1.rows; i++) {
+            for (int j = 0; j < smth_1.cols; j++) {
+                pixel_smooth << hex << (int)smth_1.at<uchar>(i, j) << endl;
+            }
+        }
+    }
 }
 
 
 void MYORB::BRIEF_descriptor(int option){
     Mat img;
     vector<KeyPoint> keylist;
-    vector<int> orient;
+    vector<int> cos, sin;
     if(option == 1){
         img = smth_1;
         keylist = keylist_1;
-        orient = orientation_1;
+        cos = cos_1;
+        sin = sin_1;
     }
     else if(option == 2){
         img = smth_2;
         keylist = keylist_2;
-        orient = orientation_2;
+        cos = cos_2;
+        sin = sin_2;
     }
+    // for(int i = 0; i < keylist.size(); i++){
+    //     cout << cos[i] << " " << sin[i] << endl;
+    // }
     // assert(orient.size() == keylist.size());
     for(int i = 0; i < keylist.size(); i++){
         int x = keylist[i].pt.x;
@@ -455,7 +479,7 @@ void MYORB::BRIEF_descriptor(int option){
             uchar desc = 0;
             for(int bit = 0; bit < 8; bit++){
                 int x_d1, x_d2, y_d1, y_d2;
-                BRIEF_pattern_LUT(ic*8+bit, float(keylist[i].angle), x_d1, x_d2, y_d1, y_d2);
+                BRIEF_pattern_LUT(ic*8+bit, float(keylist[i].angle), cos[i], sin[i], x_d1, x_d2, y_d1, y_d2);
                 // BRIEF_pattern_LUT(ic*8+bit, 0, x_d1, x_d2, y_d1, y_d2);
                 bool result = img.at<uchar>(y+y_d1, x+x_d1) > img.at<uchar>(y+y_d2, x+x_d2);
                 // cout << result;
@@ -498,13 +522,14 @@ void MYORB::MATCH_BFmatcher(){
         int min_value = 256;
         for(int idx1 = 0; idx1 < descriptor_1.rows; idx1++){
             int hamming_distance_counter = 0;
-            for(int k = 0; k < descriptor_2.cols; k++){
-                hamming_distance_counter += MATCH_Hamming_distance(descriptor_2.at<uchar>(idx2, k), descriptor_1.at<uchar>(idx1, k));
-
-            }
-            if(hamming_distance_counter < min_value){
-                min_index = idx1;
-                min_value = hamming_distance_counter;
+            if(keylist_1[idx1].response >= min_thres){
+                for(int k = 0; k < descriptor_2.cols; k++){
+                    hamming_distance_counter += MATCH_Hamming_distance(descriptor_2.at<uchar>(idx2, k), descriptor_1.at<uchar>(idx1, k));
+                }
+                if(hamming_distance_counter < min_value){
+                    min_index = idx1;
+                    min_value = hamming_distance_counter;
+                }
             }
         }
         // constructor: query -> train -> distance
@@ -514,93 +539,28 @@ void MYORB::MATCH_BFmatcher(){
     }
 }
 
-void MYORB::MATCH_HBST_construct(){
-    // Use descriptor matrix 1 to build the HBST
-    // So the img1 -> train idnex
-    vector<int> blank;
-    for(int i = 0; i < 128; i++) 
-        HBST_index_buckets.push_back(blank);
-    
-    for(int idx1 = 0; idx1 < descriptor_1.rows; idx1++){
-        
-        // Tracerse the tree
-        int bit = 0;
-        int next_bit = 0;
-        while(1){
-            if(BRIEF_searcher(idx1, bit, descriptor_1)){
-                next_bit = bit*2 + 1;
-            }
-            else next_bit = bit*2 + 2;
-            if(next_bit > 254) break;
-            else bit = next_bit;
-        }
-        int bucket_num = bit - 127;
-
-        // Reach the bucket, add the index into it
-        cout << "Direct to bucket [" << bucket_num << "]" << endl;
-        HBST_index_buckets[bucket_num].push_back(idx1);
-    }
-
-    // DEBUG
-    for(int i = 0; i < 128; i++) {
-        cout << "bucket [" << i << "] ";
-        for(int j = 0; j < HBST_index_buckets[i].size(); j++){
-            cout << HBST_index_buckets[i][j] << " ";
-        }
-        cout << endl;
-    }
-}
-
-void MYORB::MATCH_HBST_matcher(){
-    // assert(descriptor_1.cols == descriptor_2.cols);
-    // For each descriptor in desc2, find the most similar desciptor in desc1
-    // query -> img2
-    // train -> img1
-    for(int idx2 = 0; idx2 < descriptor_2.rows; idx2++){
-        // Traverse the tree (Find the bucket)
-        int bit = 0;
-        int next_bit = 0;
-        while(1){
-            if(BRIEF_searcher(idx2, bit, descriptor_2)){
-                next_bit = bit*2 + 1;
-            }
-            else next_bit = bit*2 + 2;
-            if(next_bit > 254) break;
-            else bit = next_bit;
-        }
-        int bucket_num = bit - 127;
-
-        int min_index = -1;
-        int min_value = 256;
-        // Search the corresponding bucket
-        for(int idx_bucket = 0; idx_bucket < HBST_index_buckets[bucket_num].size(); idx_bucket++){
-            int hamming_distance_counter = 0;
-            int idx1 = HBST_index_buckets[bucket_num][idx_bucket];
-            for(int k = 0; k < descriptor_1.cols; k++){
-                hamming_distance_counter += MATCH_Hamming_distance(descriptor_1.at<uchar>(idx1, k), descriptor_2.at<uchar>(idx2, k));
-            }
-            if(hamming_distance_counter < min_value){
-                min_index = idx1;
-                min_value = hamming_distance_counter;
-            }
-        }
-        // constructor: query -> train -> distance
-        //              img2     img1
-        assert(idx2 < descriptor_2.rows && min_index < descriptor_1.rows);
-        if(min_index != -1){
-            cout << idx2 << " <-> " << min_index << endl; 
-            DMatch temp(idx2, min_index, min_value);
-            matches.push_back(temp);
-        }
-    }
-}
-
 void MYORB::MATCH_optimization(){
     for (int i = 0; i < matches.size(); i++) {
         if (matches[i].distance <= MATCH_threshold) {
             good_matches.push_back(matches[i]);
         }
     }
+
+    // double min_dist=10000, max_dist=0;
+    // for ( int i = 0; i < matches.size(); i++ )
+    // {
+    //     double dist = matches[i].distance;
+    //     if ( dist < min_dist ) min_dist = dist;
+    //     if ( dist > max_dist ) max_dist = dist;
+    // }
+
+    // int thres =  max ( 2*min_dist, 30.0 );
+    // cout << thres << endl;
+    // for ( int i = 0; i < matches.size(); i++ ){
+    //     if ( matches[i].distance <= thres ){
+    //         good_matches.push_back ( matches[i] );
+    //     }
+    // }
 }
 
 void MYORB::MATCH_matches_output(){
