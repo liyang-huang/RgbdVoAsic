@@ -20,8 +20,31 @@ const bool pyramid_on = false;
 const int feature_iter_num = 5;
 const int feature_corr_num = 12;
 
+const double max_value_1 = 9223372036854775808.0; // 64bits = 2^63
+//const double max_value_1 = 36893488147419103232.0; // 66bits = 2^65
+const double max_value_2 = 1180591620717411303424.0; // 71bits = 2^70
+
 double trunc(double num){
-	return (num<0)?ceil(num):floor(num);
+	//return (num<0)?ceil(num):floor(num);
+	return floor(num);
+}
+
+double trunc1(double num){
+       if(abs(num) > max_value_1)
+       {
+           cout << "num: " << num << endl;
+           exit(1);
+       }
+	return floor(num);
+}
+
+double trunc2(double num){
+       if(abs(num) > max_value_2)
+       {
+           cout << "trunc2 num: " << num << endl;
+           exit(1);
+       }
+	return floor(num);
 }
 
 static inline
@@ -56,14 +79,17 @@ void normalsComputer(const Mat& points3d, int rows, int cols, Mat & maskNormal, 
     {
     	Vec3d du = points3d.at<Vec3d>(y,x+1) - points3d.at<Vec3d>(y,x);
     	Vec3d dv = points3d.at<Vec3d>(y+1,x) - points3d.at<Vec3d>(y,x);
-        normals.at<Vec3d>(y,x) = du.cross(dv); //MUL^2
+        //normals.at<Vec3d>(y,x) = du.cross(dv); //MUL^2
+        normals.at<Vec3d>(y,x)[0] = trunc2(du[1] * dv[2] / MUL) - trunc2(du[2] * dv[1] / MUL);
+        normals.at<Vec3d>(y,x)[1] = trunc2(du[2] * dv[0] / MUL) - trunc2(du[0] * dv[2] / MUL);
+        normals.at<Vec3d>(y,x)[2] = trunc2(du[0] * dv[1] / MUL) - trunc2(du[1] * dv[0] / MUL);
         if(normals.at<Vec3d>(y,x)[0] != 0 || normals.at<Vec3d>(y,x)[1] != 0 || normals.at<Vec3d>(y,x)[2] != 0)
         {
             maskNormal.at<uchar>(y,x) = 255;
-            double norm = trunc(sqrt(normals.at<Vec3d>(y,x)[0]*normals.at<Vec3d>(y,x)[0] + normals.at<Vec3d>(y,x)[1]*normals.at<Vec3d>(y,x)[1] +normals.at<Vec3d>(y,x)[2]*normals.at<Vec3d>(y,x)[2])); //MUL^2
-                normals.at<Vec3d>(y,x)[0] = trunc(normals.at<Vec3d>(y,x)[0] * MUL / norm);
-                normals.at<Vec3d>(y,x)[1] = trunc(normals.at<Vec3d>(y,x)[1] * MUL / norm);
-                normals.at<Vec3d>(y,x)[2] = trunc(normals.at<Vec3d>(y,x)[2] * MUL / norm);
+            double norm = trunc2(sqrt(normals.at<Vec3d>(y,x)[0]*normals.at<Vec3d>(y,x)[0] + normals.at<Vec3d>(y,x)[1]*normals.at<Vec3d>(y,x)[1] +normals.at<Vec3d>(y,x)[2]*normals.at<Vec3d>(y,x)[2])); //MUL^2
+                normals.at<Vec3d>(y,x)[0] = trunc1(normals.at<Vec3d>(y,x)[0] * MUL / norm);
+                normals.at<Vec3d>(y,x)[1] = trunc1(normals.at<Vec3d>(y,x)[1] * MUL / norm);
+                normals.at<Vec3d>(y,x)[2] = trunc1(normals.at<Vec3d>(y,x)[2] * MUL / norm);
         }
     }
   }
@@ -164,9 +190,9 @@ depthTo3dNoMask(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& points3d
     for (int x = 0; x < in_depth.cols; ++x, ++point, ++depth)
     {
         T z = *depth;
-        (*point)[0] = trunc(trunc(x*MUL - ox*MUL) * z / (fx*MUL) * MUL);
-        (*point)[1] = trunc(trunc(y*MUL - oy*MUL) * z / (fy*MUL) * MUL);
-        (*point)[2] = trunc(z * MUL);
+        (*point)[0] = trunc1(trunc1(x*MUL - ox*MUL) * z / (fx*MUL) * MUL);
+        (*point)[1] = trunc1(trunc1(y*MUL - oy*MUL) * z / (fy*MUL) * MUL);
+        (*point)[2] = trunc1(z * MUL);
         //(*point)[0] = trunc(trunc(x*MUL - ox*MUL) * z / (fx*MUL));
         //(*point)[1] = trunc(trunc(y*MUL - oy*MUL) * z / (fy*MUL));
         //(*point)[2] = z;
@@ -488,7 +514,7 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
 	 //exit(1);
          sigma += diffs_ptr[correspIndex] * diffs_ptr[correspIndex];
     }
-    sigma = std::sqrt(sigma/correspsCount);
+    sigma = trunc1(std::sqrt(trunc1(sigma/correspsCount)));
 
     std::vector<double> A_buf(transformDim);
     double* A_ptr = &A_buf[0];
@@ -506,9 +532,9 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
 
          const Point3d& p0 = cloud0.at<Point3d>(v0,u0);
          Point3d tp0;
-         tp0.x = trunc(p0.x * Rt_ptr[0] / MUL) + trunc(p0.y * Rt_ptr[1] / MUL) + trunc(p0.z * Rt_ptr[2]  / MUL) + Rt_ptr[3] ;
-         tp0.y = trunc(p0.x * Rt_ptr[4] / MUL) + trunc(p0.y * Rt_ptr[5] / MUL) + trunc(p0.z * Rt_ptr[6]  / MUL) + Rt_ptr[7] ;
-         tp0.z = trunc(p0.x * Rt_ptr[8] / MUL) + trunc(p0.y * Rt_ptr[9] / MUL) + trunc(p0.z * Rt_ptr[10] / MUL) + Rt_ptr[11];
+         tp0.x = trunc1(p0.x * Rt_ptr[0] / MUL) + trunc1(p0.y * Rt_ptr[1] / MUL) + trunc1(p0.z * Rt_ptr[2]  / MUL) + Rt_ptr[3] ;
+         tp0.y = trunc1(p0.x * Rt_ptr[4] / MUL) + trunc1(p0.y * Rt_ptr[5] / MUL) + trunc1(p0.z * Rt_ptr[6]  / MUL) + Rt_ptr[7] ;
+         tp0.z = trunc1(p0.x * Rt_ptr[8] / MUL) + trunc1(p0.y * Rt_ptr[9] / MUL) + trunc1(p0.z * Rt_ptr[10] / MUL) + Rt_ptr[11];
 
          //func(A_ptr,
          //     w_sobelScale * dI_dx1.at<short int>(v1,u1),
@@ -1228,38 +1254,38 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
             if(!testDelta)
                 break;
             //resultRt = currRt * resultRt;
-            resultRt.at<double>(0,0)=trunc(currRt.at<double>(0,0)*resultRt.at<double>(0,0)/MUL)+trunc(currRt.at<double>(0,1)*resultRt.at<double>(1,0)/MUL)+
-                                     trunc(currRt.at<double>(0,2)*resultRt.at<double>(2,0)/MUL)+trunc(currRt.at<double>(0,3)*resultRt.at<double>(3,0)/MUL); 
-            resultRt.at<double>(0,1)=trunc(currRt.at<double>(0,0)*resultRt.at<double>(0,1)/MUL)+trunc(currRt.at<double>(0,1)*resultRt.at<double>(1,1)/MUL)+
-                                     trunc(currRt.at<double>(0,2)*resultRt.at<double>(2,1)/MUL)+trunc(currRt.at<double>(0,3)*resultRt.at<double>(3,1)/MUL); 
-            resultRt.at<double>(0,2)=trunc(currRt.at<double>(0,0)*resultRt.at<double>(0,2)/MUL)+trunc(currRt.at<double>(0,1)*resultRt.at<double>(1,2)/MUL)+
-                                     trunc(currRt.at<double>(0,2)*resultRt.at<double>(2,2)/MUL)+trunc(currRt.at<double>(0,3)*resultRt.at<double>(3,2)/MUL); 
-            resultRt.at<double>(0,3)=trunc(currRt.at<double>(0,0)*resultRt.at<double>(0,3)/MUL)+trunc(currRt.at<double>(0,1)*resultRt.at<double>(1,3)/MUL)+
-                                     trunc(currRt.at<double>(0,2)*resultRt.at<double>(2,3)/MUL)+trunc(currRt.at<double>(0,3)*resultRt.at<double>(3,3)/MUL); 
-            resultRt.at<double>(1,0)=trunc(currRt.at<double>(1,0)*resultRt.at<double>(0,0)/MUL)+trunc(currRt.at<double>(1,1)*resultRt.at<double>(1,0)/MUL)+
-                                     trunc(currRt.at<double>(1,2)*resultRt.at<double>(2,0)/MUL)+trunc(currRt.at<double>(1,3)*resultRt.at<double>(3,0)/MUL); 
-            resultRt.at<double>(1,1)=trunc(currRt.at<double>(1,0)*resultRt.at<double>(0,1)/MUL)+trunc(currRt.at<double>(1,1)*resultRt.at<double>(1,1)/MUL)+
-                                     trunc(currRt.at<double>(1,2)*resultRt.at<double>(2,1)/MUL)+trunc(currRt.at<double>(1,3)*resultRt.at<double>(3,1)/MUL); 
-            resultRt.at<double>(1,2)=trunc(currRt.at<double>(1,0)*resultRt.at<double>(0,2)/MUL)+trunc(currRt.at<double>(1,1)*resultRt.at<double>(1,2)/MUL)+
-                                     trunc(currRt.at<double>(1,2)*resultRt.at<double>(2,2)/MUL)+trunc(currRt.at<double>(1,3)*resultRt.at<double>(3,2)/MUL); 
-            resultRt.at<double>(1,3)=trunc(currRt.at<double>(1,0)*resultRt.at<double>(0,3)/MUL)+trunc(currRt.at<double>(1,1)*resultRt.at<double>(1,3)/MUL)+
-                                     trunc(currRt.at<double>(1,2)*resultRt.at<double>(2,3)/MUL)+trunc(currRt.at<double>(1,3)*resultRt.at<double>(3,3)/MUL); 
-            resultRt.at<double>(2,0)=trunc(currRt.at<double>(2,0)*resultRt.at<double>(0,0)/MUL)+trunc(currRt.at<double>(2,1)*resultRt.at<double>(1,0)/MUL)+
-                                     trunc(currRt.at<double>(2,2)*resultRt.at<double>(2,0)/MUL)+trunc(currRt.at<double>(2,3)*resultRt.at<double>(3,0)/MUL); 
-            resultRt.at<double>(2,1)=trunc(currRt.at<double>(2,0)*resultRt.at<double>(0,1)/MUL)+trunc(currRt.at<double>(2,1)*resultRt.at<double>(1,1)/MUL)+
-                                     trunc(currRt.at<double>(2,2)*resultRt.at<double>(2,1)/MUL)+trunc(currRt.at<double>(2,3)*resultRt.at<double>(3,1)/MUL); 
-            resultRt.at<double>(2,2)=trunc(currRt.at<double>(2,0)*resultRt.at<double>(0,2)/MUL)+trunc(currRt.at<double>(2,1)*resultRt.at<double>(1,2)/MUL)+
-                                     trunc(currRt.at<double>(2,2)*resultRt.at<double>(2,2)/MUL)+trunc(currRt.at<double>(2,3)*resultRt.at<double>(3,2)/MUL); 
-            resultRt.at<double>(2,3)=trunc(currRt.at<double>(2,0)*resultRt.at<double>(0,3)/MUL)+trunc(currRt.at<double>(2,1)*resultRt.at<double>(1,3)/MUL)+
-                                     trunc(currRt.at<double>(2,2)*resultRt.at<double>(2,3)/MUL)+trunc(currRt.at<double>(2,3)*resultRt.at<double>(3,3)/MUL); 
-            resultRt.at<double>(3,0)=trunc(currRt.at<double>(3,0)*resultRt.at<double>(0,0)/MUL)+trunc(currRt.at<double>(3,1)*resultRt.at<double>(1,0)/MUL)+
-                                     trunc(currRt.at<double>(3,2)*resultRt.at<double>(2,0)/MUL)+trunc(currRt.at<double>(3,3)*resultRt.at<double>(3,0)/MUL); 
-            resultRt.at<double>(3,1)=trunc(currRt.at<double>(3,0)*resultRt.at<double>(0,1)/MUL)+trunc(currRt.at<double>(3,1)*resultRt.at<double>(1,1)/MUL)+
-                                     trunc(currRt.at<double>(3,2)*resultRt.at<double>(2,1)/MUL)+trunc(currRt.at<double>(3,3)*resultRt.at<double>(3,1)/MUL); 
-            resultRt.at<double>(3,2)=trunc(currRt.at<double>(3,0)*resultRt.at<double>(0,2)/MUL)+trunc(currRt.at<double>(3,1)*resultRt.at<double>(1,2)/MUL)+
-                                     trunc(currRt.at<double>(3,2)*resultRt.at<double>(2,2)/MUL)+trunc(currRt.at<double>(3,3)*resultRt.at<double>(3,2)/MUL); 
-            resultRt.at<double>(3,3)=trunc(currRt.at<double>(3,0)*resultRt.at<double>(0,3)/MUL)+trunc(currRt.at<double>(3,1)*resultRt.at<double>(1,3)/MUL)+
-                                     trunc(currRt.at<double>(3,2)*resultRt.at<double>(2,3)/MUL)+trunc(currRt.at<double>(3,3)*resultRt.at<double>(3,3)/MUL); 
+            resultRt.at<double>(0,0)=trunc1(currRt.at<double>(0,0)*resultRt.at<double>(0,0)/MUL)+trunc1(currRt.at<double>(0,1)*resultRt.at<double>(1,0)/MUL)+
+                                     trunc1(currRt.at<double>(0,2)*resultRt.at<double>(2,0)/MUL)+trunc1(currRt.at<double>(0,3)*resultRt.at<double>(3,0)/MUL); 
+            resultRt.at<double>(0,1)=trunc1(currRt.at<double>(0,0)*resultRt.at<double>(0,1)/MUL)+trunc1(currRt.at<double>(0,1)*resultRt.at<double>(1,1)/MUL)+
+                                     trunc1(currRt.at<double>(0,2)*resultRt.at<double>(2,1)/MUL)+trunc1(currRt.at<double>(0,3)*resultRt.at<double>(3,1)/MUL); 
+            resultRt.at<double>(0,2)=trunc1(currRt.at<double>(0,0)*resultRt.at<double>(0,2)/MUL)+trunc1(currRt.at<double>(0,1)*resultRt.at<double>(1,2)/MUL)+
+                                     trunc1(currRt.at<double>(0,2)*resultRt.at<double>(2,2)/MUL)+trunc1(currRt.at<double>(0,3)*resultRt.at<double>(3,2)/MUL); 
+            resultRt.at<double>(0,3)=trunc1(currRt.at<double>(0,0)*resultRt.at<double>(0,3)/MUL)+trunc1(currRt.at<double>(0,1)*resultRt.at<double>(1,3)/MUL)+
+                                     trunc1(currRt.at<double>(0,2)*resultRt.at<double>(2,3)/MUL)+trunc1(currRt.at<double>(0,3)*resultRt.at<double>(3,3)/MUL); 
+            resultRt.at<double>(1,0)=trunc1(currRt.at<double>(1,0)*resultRt.at<double>(0,0)/MUL)+trunc1(currRt.at<double>(1,1)*resultRt.at<double>(1,0)/MUL)+
+                                     trunc1(currRt.at<double>(1,2)*resultRt.at<double>(2,0)/MUL)+trunc1(currRt.at<double>(1,3)*resultRt.at<double>(3,0)/MUL); 
+            resultRt.at<double>(1,1)=trunc1(currRt.at<double>(1,0)*resultRt.at<double>(0,1)/MUL)+trunc1(currRt.at<double>(1,1)*resultRt.at<double>(1,1)/MUL)+
+                                     trunc1(currRt.at<double>(1,2)*resultRt.at<double>(2,1)/MUL)+trunc1(currRt.at<double>(1,3)*resultRt.at<double>(3,1)/MUL); 
+            resultRt.at<double>(1,2)=trunc1(currRt.at<double>(1,0)*resultRt.at<double>(0,2)/MUL)+trunc1(currRt.at<double>(1,1)*resultRt.at<double>(1,2)/MUL)+
+                                     trunc1(currRt.at<double>(1,2)*resultRt.at<double>(2,2)/MUL)+trunc1(currRt.at<double>(1,3)*resultRt.at<double>(3,2)/MUL); 
+            resultRt.at<double>(1,3)=trunc1(currRt.at<double>(1,0)*resultRt.at<double>(0,3)/MUL)+trunc1(currRt.at<double>(1,1)*resultRt.at<double>(1,3)/MUL)+
+                                     trunc1(currRt.at<double>(1,2)*resultRt.at<double>(2,3)/MUL)+trunc1(currRt.at<double>(1,3)*resultRt.at<double>(3,3)/MUL); 
+            resultRt.at<double>(2,0)=trunc1(currRt.at<double>(2,0)*resultRt.at<double>(0,0)/MUL)+trunc1(currRt.at<double>(2,1)*resultRt.at<double>(1,0)/MUL)+
+                                     trunc1(currRt.at<double>(2,2)*resultRt.at<double>(2,0)/MUL)+trunc1(currRt.at<double>(2,3)*resultRt.at<double>(3,0)/MUL); 
+            resultRt.at<double>(2,1)=trunc1(currRt.at<double>(2,0)*resultRt.at<double>(0,1)/MUL)+trunc1(currRt.at<double>(2,1)*resultRt.at<double>(1,1)/MUL)+
+                                     trunc1(currRt.at<double>(2,2)*resultRt.at<double>(2,1)/MUL)+trunc1(currRt.at<double>(2,3)*resultRt.at<double>(3,1)/MUL); 
+            resultRt.at<double>(2,2)=trunc1(currRt.at<double>(2,0)*resultRt.at<double>(0,2)/MUL)+trunc1(currRt.at<double>(2,1)*resultRt.at<double>(1,2)/MUL)+
+                                     trunc1(currRt.at<double>(2,2)*resultRt.at<double>(2,2)/MUL)+trunc1(currRt.at<double>(2,3)*resultRt.at<double>(3,2)/MUL); 
+            resultRt.at<double>(2,3)=trunc1(currRt.at<double>(2,0)*resultRt.at<double>(0,3)/MUL)+trunc1(currRt.at<double>(2,1)*resultRt.at<double>(1,3)/MUL)+
+                                     trunc1(currRt.at<double>(2,2)*resultRt.at<double>(2,3)/MUL)+trunc1(currRt.at<double>(2,3)*resultRt.at<double>(3,3)/MUL); 
+            resultRt.at<double>(3,0)=trunc1(currRt.at<double>(3,0)*resultRt.at<double>(0,0)/MUL)+trunc1(currRt.at<double>(3,1)*resultRt.at<double>(1,0)/MUL)+
+                                     trunc1(currRt.at<double>(3,2)*resultRt.at<double>(2,0)/MUL)+trunc1(currRt.at<double>(3,3)*resultRt.at<double>(3,0)/MUL); 
+            resultRt.at<double>(3,1)=trunc1(currRt.at<double>(3,0)*resultRt.at<double>(0,1)/MUL)+trunc1(currRt.at<double>(3,1)*resultRt.at<double>(1,1)/MUL)+
+                                     trunc1(currRt.at<double>(3,2)*resultRt.at<double>(2,1)/MUL)+trunc1(currRt.at<double>(3,3)*resultRt.at<double>(3,1)/MUL); 
+            resultRt.at<double>(3,2)=trunc1(currRt.at<double>(3,0)*resultRt.at<double>(0,2)/MUL)+trunc1(currRt.at<double>(3,1)*resultRt.at<double>(1,2)/MUL)+
+                                     trunc1(currRt.at<double>(3,2)*resultRt.at<double>(2,2)/MUL)+trunc1(currRt.at<double>(3,3)*resultRt.at<double>(3,2)/MUL); 
+            resultRt.at<double>(3,3)=trunc1(currRt.at<double>(3,0)*resultRt.at<double>(0,3)/MUL)+trunc1(currRt.at<double>(3,1)*resultRt.at<double>(1,3)/MUL)+
+                                     trunc1(currRt.at<double>(3,2)*resultRt.at<double>(2,3)/MUL)+trunc1(currRt.at<double>(3,3)*resultRt.at<double>(3,3)/MUL); 
             isOk = true;
         }
         //exit(1);
