@@ -7,7 +7,7 @@
 #include "vo.hpp"
 #include "MYORB.h"
 
-#define USE_MYORB 0// 1: MYORB, 0 : opencv ORB
+#define USE_MYORB 1// 1: MYORB, 0 : opencv ORB
 
 using namespace cv;
 using namespace std;
@@ -17,7 +17,7 @@ const int sobelSize = 3;
 const double sobelScale = 1./8.;
 
 const bool pyramid_on = false;
-const int feature_iter_num = 5;
+const int feature_iter_num = 2;
 const int feature_corr_num = 12;
 
 const double max_value_1 = 9223372036854775808.0; // 64bits = 2^63
