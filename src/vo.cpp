@@ -25,7 +25,11 @@ const double max_value_1 = 9223372036854775808.0; // 64bits = 2^63
 //const double max_value_2 = 73786976294838206464.0; // 67bits = 2^66
 //const double max_value_2 = 147573952589676412928.0; // 68bits = 2^67
 const double max_value_2 = 1180591620717411303424.0; // 71bits = 2^70
-const double max_value_3 = 37778931862957161709568.0; // 76bits = 2^75
+//const double max_value_3 = 37778931862957161709568.0; // 76bits = 2^75
+const double max_value_3 = pow(2.0, 127); // 128bits = 2^127
+const double max_value_4 = pow(2.0, 70); 
+const double max_value_5 = pow(2.0, 178); 
+const double max_value_6 = pow(2.0, 80); 
 
 double trunc(double num){
 	//return (num<0)?ceil(num):floor(num);
@@ -54,6 +58,33 @@ double trunc3(double num){
        if(abs(num) > max_value_3)
        {
            cout << "trunc3 num: " << num << endl;
+           exit(1);
+       }
+	return floor(num);
+}
+
+double trunc4(double num){
+       if(abs(num) > max_value_4)
+       {
+           cout << "trunc4 num: " << num << endl;
+           exit(1);
+       }
+	return floor(num);
+}
+
+double trunc5(double num){
+       if(abs(num) > max_value_5)
+       {
+           cout << "trunc5 num: " << num << endl;
+           exit(1);
+       }
+	return floor(num);
+}
+
+double trunc6(double num){
+       if(abs(num) > max_value_6)
+       {
+           cout << "trunc6 num: " << num << endl;
            exit(1);
        }
 	return floor(num);
@@ -612,9 +643,9 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
 
         const Point3d& p0 = cloud0.at<Point3d>(v0,u0);
         Point3d tp0;
-        tp0.x = trunc(p0.x * Rt_ptr[0] / MUL) + trunc(p0.y * Rt_ptr[1] / MUL) + trunc(p0.z * Rt_ptr[2]  / MUL) + Rt_ptr[3] ;
-        tp0.y = trunc(p0.x * Rt_ptr[4] / MUL) + trunc(p0.y * Rt_ptr[5] / MUL) + trunc(p0.z * Rt_ptr[6]  / MUL) + Rt_ptr[7] ;
-        tp0.z = trunc(p0.x * Rt_ptr[8] / MUL) + trunc(p0.y * Rt_ptr[9] / MUL) + trunc(p0.z * Rt_ptr[10] / MUL) + Rt_ptr[11];
+        tp0.x = trunc4(p0.x * Rt_ptr[0] / MUL) + trunc4(p0.y * Rt_ptr[1] / MUL) + trunc4(p0.z * Rt_ptr[2]  / MUL) + Rt_ptr[3] ;
+        tp0.y = trunc4(p0.x * Rt_ptr[4] / MUL) + trunc4(p0.y * Rt_ptr[5] / MUL) + trunc4(p0.z * Rt_ptr[6]  / MUL) + Rt_ptr[7] ;
+        tp0.z = trunc4(p0.x * Rt_ptr[8] / MUL) + trunc4(p0.y * Rt_ptr[9] / MUL) + trunc4(p0.z * Rt_ptr[10] / MUL) + Rt_ptr[11];
 
         Vec3d n1 = normals1.at<Vec3d>(v1, u1);
         Point3d v = cloud1.at<Point3d>(v1,u1) - tp0; //MUL
@@ -626,7 +657,7 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
         sigma += diffs_ptr[correspIndex] * diffs_ptr[correspIndex]; //MUL^4
     }
 
-    sigma = trunc(std::sqrt(trunc(sigma/correspsCount))); //MUL^2
+    sigma = trunc3(std::sqrt(trunc5(sigma/correspsCount))); //MUL^2
 
     std::vector<double> A_buf(transformDim);
     double* A_ptr = &A_buf[0];
@@ -639,20 +670,20 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
         //w = w > DBL_EPSILON ? 1./w : 1.;
 
         //func(A_ptr, tps0_ptr[correspIndex], normals1.at<Vec3d>(v1, u1) * w);
-        A_ptr[0] =trunc(-tps0_ptr[correspIndex].z * normals1.at<Vec3d>(v1, u1)[1] * MUL /  w) + trunc(tps0_ptr[correspIndex].y * normals1.at<Vec3d>(v1, u1)[2] * MUL / w);
-        A_ptr[1] =trunc( tps0_ptr[correspIndex].z * normals1.at<Vec3d>(v1, u1)[0] * MUL /  w) - trunc(tps0_ptr[correspIndex].x * normals1.at<Vec3d>(v1, u1)[2] * MUL / w);
-        A_ptr[2] =trunc(-tps0_ptr[correspIndex].y * normals1.at<Vec3d>(v1, u1)[0] * MUL /  w) + trunc(tps0_ptr[correspIndex].x * normals1.at<Vec3d>(v1, u1)[1] * MUL / w);
-        A_ptr[3] =trunc(normals1.at<Vec3d>(v1, u1)[0] * MUL * MUL / w);
-        A_ptr[4] =trunc(normals1.at<Vec3d>(v1, u1)[1] * MUL * MUL / w);
-        A_ptr[5] =trunc(normals1.at<Vec3d>(v1, u1)[2] * MUL * MUL / w);
+        A_ptr[0] =trunc4(-tps0_ptr[correspIndex].z * normals1.at<Vec3d>(v1, u1)[1] * MUL /  w) + trunc4(tps0_ptr[correspIndex].y * normals1.at<Vec3d>(v1, u1)[2] * MUL / w);
+        A_ptr[1] =trunc4( tps0_ptr[correspIndex].z * normals1.at<Vec3d>(v1, u1)[0] * MUL /  w) - trunc4(tps0_ptr[correspIndex].x * normals1.at<Vec3d>(v1, u1)[2] * MUL / w);
+        A_ptr[2] =trunc4(-tps0_ptr[correspIndex].y * normals1.at<Vec3d>(v1, u1)[0] * MUL /  w) + trunc4(tps0_ptr[correspIndex].x * normals1.at<Vec3d>(v1, u1)[1] * MUL / w);
+        A_ptr[3] =trunc4(normals1.at<Vec3d>(v1, u1)[0] * MUL * MUL / w);
+        A_ptr[4] =trunc4(normals1.at<Vec3d>(v1, u1)[1] * MUL * MUL / w);
+        A_ptr[5] =trunc4(normals1.at<Vec3d>(v1, u1)[2] * MUL * MUL / w);
 
         for(int y = 0; y < transformDim; y++)
         {
             double* AtA_ptr = AtA.ptr<double>(y);
             for(int x = y; x < transformDim; x++)
-                AtA_ptr[x] += trunc(A_ptr[y] * A_ptr[x] / MUL);
+                AtA_ptr[x] += trunc4(A_ptr[y] * A_ptr[x] / MUL);
 
-            AtB_ptr[y] += trunc(A_ptr[y] * diffs_ptr[correspIndex] / w);
+            AtB_ptr[y] += trunc4(A_ptr[y] * diffs_ptr[correspIndex] / w);
         }
     }
 
@@ -727,7 +758,7 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
         w_y = w_y > DBL_EPSILON ? 1./w_y : 1.;
 
         //func_x(A_ptr_x, tps0_ptr[correspIndex], fx * w_x);
-        double z_squared = trunc(tps0_ptr[correspIndex].z * tps0_ptr[correspIndex].z);
+        double z_squared = trunc3(tps0_ptr[correspIndex].z * tps0_ptr[correspIndex].z);
         A_ptr_x[0] = -( trunc1( trunc1(fx * MUL) * tps0_ptr[correspIndex].x * tps0_ptr[correspIndex].y / z_squared ) );
         A_ptr_x[1] = trunc1(fx * MUL) + trunc1( trunc1(fx * MUL) * tps0_ptr[correspIndex].x * tps0_ptr[correspIndex].x / z_squared);
         A_ptr_x[2] = -( trunc1( trunc1(fx * MUL) * tps0_ptr[correspIndex].y / tps0_ptr[correspIndex].z ) );
@@ -777,20 +808,20 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
     {
         for(int m = 0; m < k; m++) //dkk = akk - lkm * lkm * dmm  = akk - lkm * umk 
         {
-            A.at<double>(k, k) = A.at<double>(k, k) - trunc((A.at<double>(k, m) * A.at<double>(m, k)) / MUL);
+            A.at<double>(k, k) = A.at<double>(k, k) - trunc6((A.at<double>(k, m) * A.at<double>(m, k)) / MUL);
         }
  
         for(int i = k+1; i < cols; i++)
         {
             for(int m = 0; m < k; m++) //uki = aki - lkm * umi
             {
-                 A.at<double>(k, i) = A.at<double>(k, i) - trunc((A.at<double>(m, i) * A.at<double>(k, m)) / MUL);
+                 A.at<double>(k, i) = A.at<double>(k, i) - trunc6((A.at<double>(m, i) * A.at<double>(k, m)) / MUL);
             }
             if(fabs(A.at<double>(k, k)) <= DBL_EPSILON)
                 return false;
          
             //lik = uki / dkk 
-            A.at<double>(i, k) = trunc(A.at<double>(k, i) * MUL / A.at<double>(k, k));
+            A.at<double>(i, k) = trunc6(A.at<double>(k, i) * MUL / A.at<double>(k, k));
         }
     }
 
@@ -798,7 +829,7 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
     {
         for(int k = 0; k < i; k++)
         {
-            B.at<double>(i, 0) = B.at<double>(i, 0) - trunc((A.at<double>(i, k) * B.at<double>(k, 0)) / MUL);
+            B.at<double>(i, 0) = B.at<double>(i, 0) - trunc6((A.at<double>(i, k) * B.at<double>(k, 0)) / MUL);
         }
     }
 
@@ -806,10 +837,10 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
     {
         if(fabs(A.at<double>(i, i)) <= DBL_EPSILON)
             return false;
-        B.at<double>(i, 0) = trunc(B.at<double>(i, 0) * MUL / A.at<double>(i, i));
+        B.at<double>(i, 0) = trunc6(B.at<double>(i, 0) * MUL / A.at<double>(i, i));
         for(int k = i+1; k < rows; k++)
         {
-            B.at<double>(i, 0) = B.at<double>(i, 0) - trunc((A.at<double>(k, i) * B.at<double>(k, 0)) / MUL);
+            B.at<double>(i, 0) = B.at<double>(i, 0) - trunc6((A.at<double>(k, i) * B.at<double>(k, 0)) / MUL);
         }
     }
 

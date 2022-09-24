@@ -81,7 +81,7 @@ vector<DMatch> MYORB::Matching(){
     // sort(keylist_2.begin(), keylist_2.end(), response_comparator);
     // while (keylist_2.size() > keypoints_num) keylist_2.pop_back();
     FAST_sort();
-    cout << keylist_1.size() << "  " << keylist_2.size() << endl;
+    //cout << keylist_1.size() << "  " << keylist_2.size() << endl;
     
 
     // vector<KeyPoint> temp = keylist_1;
@@ -131,7 +131,7 @@ vector<DMatch> MYORB::Matching(){
     // cout << "Optimize matches..." << endl;
     MATCH_optimization();
 
-    if(1){
+    if(DISPLAY){
         for(int i = 0; i < matches.size(); i++){
             cout << "(" << hex << setw(3) << setfill('0') << int(keylist_1[matches[i].trainIdx].pt.x) << ", " << hex << setw(3) << setfill('0') << int(keylist_1[matches[i].trainIdx].pt.y) << ")";
             cout << " <---> ";
