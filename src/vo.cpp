@@ -8,6 +8,7 @@
 #include "MYORB.h"
 
 #define USE_MYORB 1// 1: MYORB, 0 : opencv ORB
+#define MUL pow(2.0, 24)
 
 using namespace cv;
 using namespace std;
@@ -30,9 +31,64 @@ const double max_value_3 = pow(2.0, 127); // 128bits = 2^127
 const double max_value_4 = pow(2.0, 70); 
 const double max_value_5 = pow(2.0, 178); 
 const double max_value_6 = pow(2.0, 80); 
+const double max_value_3d = pow(2.0, 41); 
+const double max_value_lsm_f1 = pow(2.0, 41); 
+const double max_value_lsm_f2 = pow(2.0, 41); 
+const double max_value_lsm_f3 = pow(2.0, 41); 
+const double max_value_lsm_f4 = pow(2.0, 45); 
 
 double trunc(double num){
 	//return (num<0)?ceil(num):floor(num);
+	return floor(num);
+}
+
+double trunc_3d(double num){
+       if(abs(num) > max_value_3d)
+       {
+           cout << "num: " << num << endl;
+           cout << "In trunc_3d " << endl;
+           exit(1);
+       }
+	return floor(num);
+}
+
+double trunc_lsm_f1(double num){
+       if(abs(num) > max_value_lsm_f1)
+       {
+           cout << "num: " << num << endl;
+           cout << "In trunc_lsm_f1 " << endl;
+           exit(1);
+       }
+	return floor(num);
+}
+
+double trunc_lsm_f2(double num){
+       if(abs(num) > max_value_lsm_f2)
+       {
+           cout << "num: " << num << endl;
+           cout << "In trunc_lsm_f2 " << endl;
+           exit(1);
+       }
+	return floor(num);
+}
+
+double trunc_lsm_f3(double num){
+       if(abs(num) > max_value_lsm_f3)
+       {
+           cout << "num: " << num << endl;
+           cout << "In trunc_lsm_f3 " << endl;
+           exit(1);
+       }
+	return floor(num);
+}
+
+double trunc_lsm_f4(double num){
+       if(abs(num) > max_value_lsm_f4)
+       {
+           cout << "num: " << num << endl;
+           cout << "In trunc_lsm_f4 " << endl;
+           exit(1);
+       }
 	return floor(num);
 }
 
@@ -233,9 +289,9 @@ depthTo3dNoMask(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& points3d
     for (int x = 0; x < in_depth.cols; ++x, ++point, ++depth)
     {
         T z = *depth;
-        (*point)[0] = trunc1(trunc1(x*MUL - ox*MUL) * z / (fx*MUL) * MUL);
-        (*point)[1] = trunc1(trunc1(y*MUL - oy*MUL) * z / (fy*MUL) * MUL);
-        (*point)[2] = trunc1(z * MUL);
+        (*point)[0] = trunc_3d(trunc_3d(x*MUL - ox*MUL) * z / (fx*MUL) * MUL);
+        (*point)[1] = trunc_3d(trunc_3d(y*MUL - oy*MUL) * z / (fy*MUL) * MUL);
+        (*point)[2] = trunc_3d(z * MUL);
         //(*point)[0] = trunc(trunc(x*MUL - ox*MUL) * z / (fx*MUL));
         //(*point)[1] = trunc(trunc(y*MUL - oy*MUL) * z / (fy*MUL));
         //(*point)[2] = z;
@@ -725,13 +781,13 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
     
         const Point3d& p0 = cloud0.at<Point3d>(v0,u0);
         Point3d tp0;
-        tp0.x = trunc1(p0.x * Rt_ptr[0] / MUL) + trunc1(p0.y * Rt_ptr[1] / MUL) + trunc1(p0.z * Rt_ptr[2]  / MUL) + Rt_ptr[3] ;
-        tp0.y = trunc1(p0.x * Rt_ptr[4] / MUL) + trunc1(p0.y * Rt_ptr[5] / MUL) + trunc1(p0.z * Rt_ptr[6]  / MUL) + Rt_ptr[7] ;
-        tp0.z = trunc1(p0.x * Rt_ptr[8] / MUL) + trunc1(p0.y * Rt_ptr[9] / MUL) + trunc1(p0.z * Rt_ptr[10] / MUL) + Rt_ptr[11];
+        tp0.x = trunc_lsm_f1(p0.x * Rt_ptr[0] / MUL) + trunc_lsm_f1(p0.y * Rt_ptr[1] / MUL) + trunc_lsm_f1(p0.z * Rt_ptr[2]  / MUL) + Rt_ptr[3] ;
+        tp0.y = trunc_lsm_f1(p0.x * Rt_ptr[4] / MUL) + trunc_lsm_f1(p0.y * Rt_ptr[5] / MUL) + trunc_lsm_f1(p0.z * Rt_ptr[6]  / MUL) + Rt_ptr[7] ;
+        tp0.z = trunc_lsm_f1(p0.x * Rt_ptr[8] / MUL) + trunc_lsm_f1(p0.y * Rt_ptr[9] / MUL) + trunc_lsm_f1(p0.z * Rt_ptr[10] / MUL) + Rt_ptr[11];
         //int p2d_x = cvRound( (trunc1(trunc1(fx * MUL) * tp0.x / tp0.z) + trunc1(cx * MUL)) / MUL);
         //int p2d_y = cvRound( (trunc1(trunc1(fy * MUL) * tp0.y / tp0.z) + trunc1(cy * MUL)) / MUL);
-        int p2d_x = trunc1( (trunc1(trunc1(fx * MUL) * tp0.x / tp0.z) + trunc1(cx * MUL)) / MUL);
-        int p2d_y = trunc1( (trunc1(trunc1(fy * MUL) * tp0.y / tp0.z) + trunc1(cy * MUL)) / MUL);
+        int p2d_x = trunc_lsm_f2( (trunc_lsm_f2(trunc_lsm_f2(fx * MUL) * tp0.x / tp0.z) + trunc_lsm_f2(cx * MUL)) / MUL);
+        int p2d_y = trunc_lsm_f2( (trunc_lsm_f2(trunc_lsm_f2(fy * MUL) * tp0.y / tp0.z) + trunc_lsm_f2(cy * MUL)) / MUL);
 
         tps0_ptr[correspIndex] = tp0;
         //diffs_x_ptr[correspIndex] = p2d_x - u1;
@@ -743,8 +799,8 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
     }
     //exit(1);
 
-    sigma_x = trunc1(std::sqrt(trunc1(sigma_x/correspsCount)));
-    sigma_y = trunc1(std::sqrt(trunc1(sigma_y/correspsCount)));
+    sigma_x = trunc_lsm_f2(std::sqrt(trunc_lsm_f2(sigma_x/correspsCount)));
+    sigma_y = trunc_lsm_f2(std::sqrt(trunc_lsm_f2(sigma_y/correspsCount)));
 
     std::vector<double> A_buf_x(transformDim);
     std::vector<double> A_buf_y(transformDim);
@@ -759,28 +815,32 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
 
         //func_x(A_ptr_x, tps0_ptr[correspIndex], fx * w_x);
         double z_squared = trunc3(tps0_ptr[correspIndex].z * tps0_ptr[correspIndex].z);
-        A_ptr_x[0] = -( trunc1( trunc1(fx * MUL) * tps0_ptr[correspIndex].x * tps0_ptr[correspIndex].y / z_squared ) );
-        A_ptr_x[1] = trunc1(fx * MUL) + trunc1( trunc1(fx * MUL) * tps0_ptr[correspIndex].x * tps0_ptr[correspIndex].x / z_squared);
-        A_ptr_x[2] = -( trunc1( trunc1(fx * MUL) * tps0_ptr[correspIndex].y / tps0_ptr[correspIndex].z ) );
-        A_ptr_x[3] = trunc1( trunc1(fx * MUL) * MUL / tps0_ptr[correspIndex].z );
+        A_ptr_x[0] = -( trunc_lsm_f3( trunc_lsm_f3(fx * MUL) * tps0_ptr[correspIndex].x * tps0_ptr[correspIndex].y / z_squared ) );
+        A_ptr_x[1] = trunc_lsm_f3(fx * MUL) + trunc_lsm_f3( trunc_lsm_f3(fx * MUL) * tps0_ptr[correspIndex].x * tps0_ptr[correspIndex].x / z_squared);
+        A_ptr_x[2] = -( trunc_lsm_f3( trunc_lsm_f3(fx * MUL) * tps0_ptr[correspIndex].y / tps0_ptr[correspIndex].z ) );
+        A_ptr_x[3] = trunc_lsm_f3( trunc_lsm_f3(fx * MUL) * MUL / tps0_ptr[correspIndex].z );
         A_ptr_x[4] = 0;
-        A_ptr_x[5] = -( trunc1(trunc1(fx * MUL)  * tps0_ptr[correspIndex].x * MUL  / z_squared) );
+        A_ptr_x[5] = -( trunc_lsm_f3(trunc_lsm_f3(fx * MUL)  * tps0_ptr[correspIndex].x * MUL  / z_squared) );
 
         //func_y(A_ptr_y, tps0_ptr[correspIndex], fy * w_y);
-        A_ptr_y[0] = -trunc1(fy * MUL) - trunc1(trunc1(fy * MUL) * tps0_ptr[correspIndex].y * tps0_ptr[correspIndex].y /z_squared);
-        A_ptr_y[1] = trunc1(trunc1(fy * MUL) * tps0_ptr[correspIndex].x * tps0_ptr[correspIndex].x / z_squared);
-        A_ptr_y[2] = trunc1(trunc1(fy * MUL) * tps0_ptr[correspIndex].x / tps0_ptr[correspIndex].z);
+        A_ptr_y[0] = -trunc_lsm_f3(fy * MUL) - trunc_lsm_f3(trunc_lsm_f3(fy * MUL) * tps0_ptr[correspIndex].y * tps0_ptr[correspIndex].y /z_squared);
+        A_ptr_y[1] = trunc_lsm_f3(trunc_lsm_f3(fy * MUL) * tps0_ptr[correspIndex].x * tps0_ptr[correspIndex].x / z_squared);
+        A_ptr_y[2] = trunc_lsm_f3(trunc_lsm_f3(fy * MUL) * tps0_ptr[correspIndex].x / tps0_ptr[correspIndex].z);
         A_ptr_y[3] = 0;
-        A_ptr_y[4] = trunc1(trunc1(fy * MUL) * MUL / tps0_ptr[correspIndex].z);
-        A_ptr_y[5] = -trunc1(trunc1(fy * MUL) * tps0_ptr[correspIndex].y * MUL /z_squared);
+        A_ptr_y[4] = trunc_lsm_f3(trunc_lsm_f3(fy * MUL) * MUL / tps0_ptr[correspIndex].z);
+        A_ptr_y[5] = -trunc_lsm_f3(trunc_lsm_f3(fy * MUL) * tps0_ptr[correspIndex].y * MUL /z_squared);
 
         for(int y = 0; y < transformDim; y++)
         {
             double* AtA_ptr = AtA.ptr<double>(y);
             for(int x = y; x < transformDim; x++)
-                AtA_ptr[x] += trunc1(A_ptr_x[y] * A_ptr_x[x] * w_x * w_x / MUL) + trunc1(A_ptr_y[y] * A_ptr_y[x] * w_y * w_y / MUL);
+                //AtA_ptr[x] += trunc1(A_ptr_x[y] * A_ptr_x[x] * w_x * w_x / MUL) + trunc1(A_ptr_y[y] * A_ptr_y[x] * w_y * w_y / MUL);
+                //HW friendly
+                AtA_ptr[x] += trunc_lsm_f4(A_ptr_x[y] * A_ptr_x[x] / MUL) + trunc_lsm_f4(A_ptr_y[y] * A_ptr_y[x] / MUL);
 
-            AtB_ptr[y] += trunc1(A_ptr_x[y] * w_x * w_x * diffs_x_ptr[correspIndex]) + trunc1(A_ptr_y[y] * w_y * w_y * diffs_y_ptr[correspIndex]);
+            //AtB_ptr[y] += trunc1(A_ptr_x[y] * w_x * w_x * diffs_x_ptr[correspIndex]) + trunc1(A_ptr_y[y] * w_y * w_y * diffs_y_ptr[correspIndex]);
+            //HW friendly
+            AtB_ptr[y] += trunc_lsm_f4(A_ptr_x[y] * diffs_x_ptr[correspIndex]) + trunc_lsm_f4(A_ptr_y[y] * diffs_y_ptr[correspIndex]);
         }
     }
 
