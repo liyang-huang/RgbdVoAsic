@@ -40,7 +40,11 @@ file(GLOB TARGET_SRC
      src/Gaussian_pattern.cpp
 )
 
-include_directories(${OpenCV_INCLUDE_DIRS} include)
+#include_directories(${OpenCV_INCLUDE_DIRS} include)
+set(GMP_DIRS ~/liyang_lib/include)
+include_directories(${GMP_DIRS} ${OpenCV_INCLUDE_DIRS} include)
+link_directories("~/liyang_lib/lib/" )
 
 add_executable(liyang-odometry ${TARGET_SRC})
-target_link_libraries (liyang-odometry ${OpenCV_LIBS})
+#target_link_libraries (liyang-odometry ${OpenCV_LIBS})
+target_link_libraries (liyang-odometry ${OpenCV_LIBS} "~/liyang_lib/lib/libgmp.so.10.4.1" "~/liyang_lib/lib/libgmpxx.so.4.6.1")

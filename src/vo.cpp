@@ -3,6 +3,8 @@
 #include <opencv2/imgproc.hpp>
 #include <iostream>
 #include <math.h>
+#include <gmpxx.h>
+#include <gmp.h>
 
 #include "vo.hpp"
 #include "MYORB.h"
@@ -30,12 +32,14 @@ const double max_value_2 = 1180591620717411303424.0; // 71bits = 2^70
 const double max_value_3 = pow(2.0, 127); // 128bits = 2^127
 const double max_value_4 = pow(2.0, 70); 
 const double max_value_5 = pow(2.0, 178); 
-const double max_value_6 = pow(2.0, 80); 
+//const double max_value_6 = pow(2.0, 80); 
+const double max_value_6 = pow(2.0, 59); 
 const double max_value_3d = pow(2.0, 41); 
 const double max_value_lsm_f1 = pow(2.0, 41); 
 const double max_value_lsm_f2 = pow(2.0, 41); 
 const double max_value_lsm_f3 = pow(2.0, 41); 
 const double max_value_lsm_f4 = pow(2.0, 45); 
+const double max_value_lsm_f5 = pow(2.0, 51); //key 
 
 double trunc(double num){
 	//return (num<0)?ceil(num):floor(num);
@@ -49,7 +53,10 @@ double trunc_3d(double num){
            cout << "In trunc_3d " << endl;
            exit(1);
        }
-	return floor(num);
+       if(num > 0)
+	   return floor(num);
+       else
+	   return ceil(num);
 }
 
 double trunc_lsm_f1(double num){
@@ -59,7 +66,10 @@ double trunc_lsm_f1(double num){
            cout << "In trunc_lsm_f1 " << endl;
            exit(1);
        }
-	return floor(num);
+       if(num > 0)
+	   return floor(num);
+       else
+	   return ceil(num);
 }
 
 double trunc_lsm_f2(double num){
@@ -69,7 +79,10 @@ double trunc_lsm_f2(double num){
            cout << "In trunc_lsm_f2 " << endl;
            exit(1);
        }
-	return floor(num);
+       if(num > 0)
+	   return floor(num);
+       else
+	   return ceil(num);
 }
 
 double trunc_lsm_f3(double num){
@@ -79,7 +92,10 @@ double trunc_lsm_f3(double num){
            cout << "In trunc_lsm_f3 " << endl;
            exit(1);
        }
-	return floor(num);
+       if(num > 0)
+	   return floor(num);
+       else
+	   return ceil(num);
 }
 
 double trunc_lsm_f4(double num){
@@ -89,7 +105,23 @@ double trunc_lsm_f4(double num){
            cout << "In trunc_lsm_f4 " << endl;
            exit(1);
        }
-	return floor(num);
+       if(num > 0)
+	   return floor(num);
+       else
+	   return ceil(num);
+}
+
+double trunc_lsm_f5(double num){
+       if(abs(num) > max_value_lsm_f5)
+       {
+           cout << "num: " << num << endl;
+           cout << "In trunc_lsm_f5 " << endl;
+           exit(1);
+       }
+       if(num > 0)
+	   return floor(num);
+       else
+	   return ceil(num);
 }
 
 double trunc1(double num){
@@ -98,7 +130,10 @@ double trunc1(double num){
            cout << "num: " << num << endl;
            exit(1);
        }
-	return floor(num);
+       if(num > 0)
+	   return floor(num);
+       else
+	   return ceil(num);
 }
 
 double trunc2(double num){
@@ -107,7 +142,10 @@ double trunc2(double num){
            cout << "trunc2 num: " << num << endl;
            exit(1);
        }
-	return floor(num);
+       if(num > 0)
+	   return floor(num);
+       else
+	   return ceil(num);
 }
 
 double trunc3(double num){
@@ -116,7 +154,10 @@ double trunc3(double num){
            cout << "trunc3 num: " << num << endl;
            exit(1);
        }
-	return floor(num);
+       if(num > 0)
+	   return floor(num);
+       else
+	   return ceil(num);
 }
 
 double trunc4(double num){
@@ -125,7 +166,10 @@ double trunc4(double num){
            cout << "trunc4 num: " << num << endl;
            exit(1);
        }
-	return floor(num);
+       if(num > 0)
+	   return floor(num);
+       else
+	   return ceil(num);
 }
 
 double trunc5(double num){
@@ -134,7 +178,10 @@ double trunc5(double num){
            cout << "trunc5 num: " << num << endl;
            exit(1);
        }
-	return floor(num);
+       if(num > 0)
+	   return floor(num);
+       else
+	   return ceil(num);
 }
 
 double trunc6(double num){
@@ -143,7 +190,10 @@ double trunc6(double num){
            cout << "trunc6 num: " << num << endl;
            exit(1);
        }
-	return floor(num);
+       if(num > 0)
+	   return floor(num);
+       else
+	   return ceil(num);
 }
 
 static inline
@@ -289,12 +339,26 @@ depthTo3dNoMask(const cv::Mat& in_depth, const cv::Mat_<T>& K, cv::Mat& points3d
     for (int x = 0; x < in_depth.cols; ++x, ++point, ++depth)
     {
         T z = *depth;
-        (*point)[0] = trunc_3d(trunc_3d(x*MUL - ox*MUL) * z / (fx*MUL) * MUL);
-        (*point)[1] = trunc_3d(trunc_3d(y*MUL - oy*MUL) * z / (fy*MUL) * MUL);
+        (*point)[0] = trunc_3d(trunc_3d(trunc_3d(x*MUL - trunc_3d(ox*MUL)) * z / trunc_3d(fx*MUL)) * MUL);
+        (*point)[1] = trunc_3d(trunc_3d(trunc_3d(y*MUL - trunc_3d(oy*MUL)) * z / trunc_3d(fy*MUL)) * MUL);
         (*point)[2] = trunc_3d(z * MUL);
         //(*point)[0] = trunc(trunc(x*MUL - ox*MUL) * z / (fx*MUL));
         //(*point)[1] = trunc(trunc(y*MUL - oy*MUL) * z / (fy*MUL));
         //(*point)[2] = z;
+        //if(x==340 && y==240 && z!=0)
+        //{
+        //    //cout << fixed << fx << endl;
+        //    //cout << fixed << fy << endl;
+        //    //cout << fixed << ox << endl;
+        //    //cout << fixed << oy << endl;
+        //    //cout << fixed << x << endl;
+        //    //cout << fixed << y << endl;
+        //    //cout << fixed << z << endl;
+        //    //cout << fixed << trunc_3d(y*MUL - trunc_3d(oy*MUL)) * z << endl;
+        //    //cout << fixed << trunc_3d(trunc_3d(y*MUL - trunc_3d(oy*MUL)) * z / trunc_3d(fy*MUL)) << endl;
+        //    //cout << fixed << trunc_3d(trunc_3d(trunc_3d(y*MUL - trunc_3d(oy*MUL)) * z / trunc_3d(fy*MUL)) * MUL) << endl;
+        //    //exit(1);
+        //}
     }
   }
 }
@@ -796,6 +860,33 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
         diffs_y_ptr[correspIndex] = v1 - p2d_y;
         sigma_x += diffs_x_ptr[correspIndex] * diffs_x_ptr[correspIndex];
         sigma_y += diffs_y_ptr[correspIndex] * diffs_y_ptr[correspIndex];
+   
+        //debug
+        //cout << "u0 " << u0 << endl;
+        //cout << "v0 " << v0 << endl;
+        //cout << "u1 " << u1 << endl;
+        //cout << "v1 " << v1 << endl;
+        //int z0 = trunc_lsm_f1(p0.z/MUL);
+        //cout << "z0 " << z0 << endl;
+        //cout << "Rt[0] "  << fixed << Rt_ptr[0] << endl;
+        //cout << "Rt[1] "  << fixed << Rt_ptr[1] << endl;
+        //cout << "Rt[2] "  << fixed << Rt_ptr[2] << endl;
+        //cout << "Rt[3] "  << fixed << Rt_ptr[3] << endl;
+        //cout << "Rt[4] "  << fixed << Rt_ptr[4] << endl;
+        //cout << "Rt[5] "  << fixed << Rt_ptr[5] << endl;
+        //cout << "Rt[6] "  << fixed << Rt_ptr[6] << endl;
+        //cout << "Rt[7] "  << fixed << Rt_ptr[7] << endl;
+        //cout << "Rt[8] "  << fixed << Rt_ptr[8] << endl;
+        //cout << "Rt[9] "  << fixed << Rt_ptr[9] << endl;
+        //cout << "Rt[10] " << fixed << Rt_ptr[10] << endl;
+        //cout << "Rt[11] " << fixed << Rt_ptr[11] << endl;
+        //cout << "p0.x " << setw(14) << setprecision(0) << fixed << tp0.x << endl;
+        //cout << "p0.y " << setw(14) << setprecision(0) << fixed << tp0.y << endl;
+        //cout << "p0.z " << setw(14) << setprecision(0) << fixed << tp0.z << endl;
+        //cout << "x:" << setw(4) << p2d_x << endl;
+        //cout << "y:" << setw(4) << p2d_y << endl;
+        //cout << "x:" << setw(4) << u1 - p2d_x << endl;
+        //cout << "y:" << setw(4) << v1 - p2d_y << endl;
     }
     //exit(1);
 
@@ -824,30 +915,133 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
 
         //func_y(A_ptr_y, tps0_ptr[correspIndex], fy * w_y);
         A_ptr_y[0] = -trunc_lsm_f3(fy * MUL) - trunc_lsm_f3(trunc_lsm_f3(fy * MUL) * tps0_ptr[correspIndex].y * tps0_ptr[correspIndex].y /z_squared);
-        A_ptr_y[1] = trunc_lsm_f3(trunc_lsm_f3(fy * MUL) * tps0_ptr[correspIndex].x * tps0_ptr[correspIndex].x / z_squared);
+        //A_ptr_y[1] = trunc_lsm_f3(trunc_lsm_f3(fy * MUL) * tps0_ptr[correspIndex].x * tps0_ptr[correspIndex].x / z_squared);
+        A_ptr_y[1] = trunc_lsm_f3(trunc_lsm_f3(fy * MUL) * tps0_ptr[correspIndex].x * tps0_ptr[correspIndex].y / z_squared);
         A_ptr_y[2] = trunc_lsm_f3(trunc_lsm_f3(fy * MUL) * tps0_ptr[correspIndex].x / tps0_ptr[correspIndex].z);
         A_ptr_y[3] = 0;
         A_ptr_y[4] = trunc_lsm_f3(trunc_lsm_f3(fy * MUL) * MUL / tps0_ptr[correspIndex].z);
         A_ptr_y[5] = -trunc_lsm_f3(trunc_lsm_f3(fy * MUL) * tps0_ptr[correspIndex].y * MUL /z_squared);
-
+        
         for(int y = 0; y < transformDim; y++)
         {
             double* AtA_ptr = AtA.ptr<double>(y);
             for(int x = y; x < transformDim; x++)
+            {
                 //AtA_ptr[x] += trunc1(A_ptr_x[y] * A_ptr_x[x] * w_x * w_x / MUL) + trunc1(A_ptr_y[y] * A_ptr_y[x] * w_y * w_y / MUL);
                 //HW friendly
-                AtA_ptr[x] += trunc_lsm_f4(A_ptr_x[y] * A_ptr_x[x] / MUL) + trunc_lsm_f4(A_ptr_y[y] * A_ptr_y[x] / MUL);
-
+                //AtA_ptr[x] += trunc_lsm_f5(trunc_lsm_f4(A_ptr_x[y] * A_ptr_x[x] / MUL) + trunc_lsm_f4(A_ptr_y[y] * A_ptr_y[x] / MUL));
+                //double miss precision
+                mpz_t A_ptr_x_x;
+                mpz_t A_ptr_x_y;
+                mpz_t A_ptr_y_x;
+                mpz_t A_ptr_y_y;
+                mpz_t MUL_gmp;
+                mpz_t AtA_gmp;
+                mpz_init_set_d(A_ptr_x_x, A_ptr_x[x]);
+                mpz_init_set_d(A_ptr_x_y, A_ptr_x[y]);
+                mpz_init_set_d(A_ptr_y_x, A_ptr_y[x]);
+                mpz_init_set_d(A_ptr_y_y, A_ptr_y[y]);
+                mpz_init_set_d(MUL_gmp, MUL);
+                mpz_init_set_d(AtA_gmp, AtA_ptr[x]);
+                mpz_mul(A_ptr_x_x,A_ptr_x_x,A_ptr_x_y);
+                mpz_div(A_ptr_x_x,A_ptr_x_x,MUL_gmp);
+                mpz_mul(A_ptr_y_y,A_ptr_y_x,A_ptr_y_y);
+                mpz_div(A_ptr_y_y,A_ptr_y_y,MUL_gmp);
+                mpz_add(A_ptr_x_x,A_ptr_x_x,A_ptr_y_y);
+                mpz_add(AtA_gmp,AtA_gmp,A_ptr_x_x);
+                AtA_ptr[x] = mpz_get_d(AtA_gmp);
+            } 
             //AtB_ptr[y] += trunc1(A_ptr_x[y] * w_x * w_x * diffs_x_ptr[correspIndex]) + trunc1(A_ptr_y[y] * w_y * w_y * diffs_y_ptr[correspIndex]);
             //HW friendly
-            AtB_ptr[y] += trunc_lsm_f4(A_ptr_x[y] * diffs_x_ptr[correspIndex]) + trunc_lsm_f4(A_ptr_y[y] * diffs_y_ptr[correspIndex]);
+            //AtB_ptr[y] += trunc_lsm_f5(trunc_lsm_f4(A_ptr_x[y] * diffs_x_ptr[correspIndex]) + trunc_lsm_f4(A_ptr_y[y] * diffs_y_ptr[correspIndex]));
+            mpz_t A_ptr_x_gmp;
+            mpz_t A_ptr_y_gmp;
+            mpz_t diffs_x_gmp;
+            mpz_t diffs_y_gmp;
+            mpz_t AtB_gmp;
+            mpz_init_set_d(A_ptr_x_gmp, A_ptr_x[y]);
+            mpz_init_set_d(A_ptr_y_gmp, A_ptr_y[y]);
+            mpz_init_set_d(diffs_x_gmp, diffs_x_ptr[correspIndex]);
+            mpz_init_set_d(diffs_y_gmp, diffs_y_ptr[correspIndex]);
+            mpz_mul(diffs_x_gmp, diffs_x_gmp, A_ptr_x_gmp);
+            mpz_mul(diffs_y_gmp, diffs_y_gmp, A_ptr_y_gmp);
+            mpz_add(diffs_x_gmp, diffs_x_gmp, diffs_y_gmp);
+            mpz_init_set_d(AtB_gmp, AtB_ptr[y]);
+            mpz_add(AtB_gmp, AtB_gmp, diffs_x_gmp);
+            AtB_ptr[y] = mpz_get_d(AtB_gmp);
         }
+        //cout << "idx " << correspIndex << endl;
+        //cout << "Ax[0] " << setw(13) << setprecision(0) << fixed << A_ptr_x[0] << endl;
+        //cout << "Ax[1] " << setw(13) << setprecision(0) << fixed << A_ptr_x[1] << endl;
+        //cout << "Ax[2] " << setw(13) << setprecision(0) << fixed << A_ptr_x[2] << endl;
+        //cout << "Ax[3] " << setw(13) << setprecision(0) << fixed << A_ptr_x[3] << endl;
+        //cout << "Ax[4] " << setw(13) << setprecision(0) << fixed << A_ptr_x[4] << endl;
+        //cout << "Ax[5] " << setw(13) << setprecision(0) << fixed << A_ptr_x[5] << endl;
+        //cout << "Ay[0] " << setw(13) << setprecision(0) << fixed << A_ptr_y[0] << endl;
+        //cout << "Ay[1] " << setw(13) << setprecision(0) << fixed << A_ptr_y[1] << endl;
+        //cout << "Ay[2] " << setw(13) << setprecision(0) << fixed << A_ptr_y[2] << endl;
+        //cout << "Ay[3] " << setw(13) << setprecision(0) << fixed << A_ptr_y[3] << endl;
+        //cout << "Ay[4] " << setw(13) << setprecision(0) << fixed << A_ptr_y[4] << endl;
+        //cout << "Ay[5] " << setw(13) << setprecision(0) << fixed << A_ptr_y[5] << endl;
+        //cout << "AtA[0][1]_tmpx_pre " << setw(17) << setprecision(0) << fixed << A_ptr_x[0] * A_ptr_x[1] << endl;
+        //cout << "AtA[0][1]_tmpy_pre " << setw(17) << setprecision(0) << fixed << A_ptr_y[0] * A_ptr_y[1] << endl;
+        //cout << "AtA[0][1]_tmpx " << setw(17) << setprecision(0) << fixed << trunc_lsm_f4(A_ptr_x[0] * A_ptr_x[1] / MUL) << endl;
+        //cout << "AtA[0][1]_tmpy " << setw(17) << setprecision(0) << fixed << trunc_lsm_f4(A_ptr_y[0] * A_ptr_y[1] / MUL) << endl;
+        //cout << "AtA[0][1] " << setw(17) << setprecision(0) << fixed << AtA.at<double>(0,1) << endl;
+        //cout << "diffs_x " << setw(17) << setprecision(0) << fixed << diffs_x_ptr[correspIndex] << endl;
+        //cout << "diffs_y " << setw(17) << setprecision(0) << fixed << diffs_y_ptr[correspIndex] << endl;
+        //cout << "AtB[0] " << setw(17) << setprecision(0) << fixed << AtB_ptr[0] << endl;
+        //exit(1);
     }
+    //exit(1);
 
     for(int y = 0; y < transformDim; y++)
         for(int x = y+1; x < transformDim; x++)
             AtA.at<double>(x,y) = AtA.at<double>(y,x);
 
+    //cout << "AtA[0][0] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(0,0) << endl;
+    //cout << "AtA[1][0] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(1,0) << endl;
+    //cout << "AtA[2][0] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(2,0) << endl;
+    //cout << "AtA[3][0] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(3,0) << endl;
+    //cout << "AtA[4][0] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(4,0) << endl;
+    //cout << "AtA[5][0] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(5,0) << endl;
+    //cout << "AtA[0][1] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(0,1) << endl;
+    //cout << "AtA[1][1] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(1,1) << endl;
+    //cout << "AtA[2][1] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(2,1) << endl;
+    //cout << "AtA[3][1] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(3,1) << endl;
+    //cout << "AtA[4][1] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(4,1) << endl;
+    //cout << "AtA[5][1] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(5,1) << endl;
+    //cout << "AtA[0][2] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(0,2) << endl;
+    //cout << "AtA[1][2] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(1,2) << endl;
+    //cout << "AtA[2][2] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(2,2) << endl;
+    //cout << "AtA[3][2] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(3,2) << endl;
+    //cout << "AtA[4][2] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(4,2) << endl;
+    //cout << "AtA[5][2] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(5,2) << endl;
+    //cout << "AtA[0][3] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(0,3) << endl;
+    //cout << "AtA[1][3] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(1,3) << endl;
+    //cout << "AtA[2][3] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(2,3) << endl;
+    //cout << "AtA[3][3] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(3,3) << endl;
+    //cout << "AtA[4][3] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(4,3) << endl;
+    //cout << "AtA[5][3] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(5,3) << endl;
+    //cout << "AtA[0][4] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(0,4) << endl;
+    //cout << "AtA[1][4] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(1,4) << endl;
+    //cout << "AtA[2][4] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(2,4) << endl;
+    //cout << "AtA[3][4] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(3,4) << endl;
+    //cout << "AtA[4][4] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(4,4) << endl;
+    //cout << "AtA[5][4] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(5,4) << endl;
+    //cout << "AtA[0][5] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(0,5) << endl;
+    //cout << "AtA[1][5] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(1,5) << endl;
+    //cout << "AtA[2][5] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(2,5) << endl;
+    //cout << "AtA[3][5] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(3,5) << endl;
+    //cout << "AtA[4][5] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(4,5) << endl;
+    //cout << "AtA[5][5] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(5,5) << endl;
+    cout << "AtB[0] " << setw(13) << setprecision(0) << fixed << AtB_ptr[0] << endl;
+    cout << "AtB[1] " << setw(13) << setprecision(0) << fixed << AtB_ptr[1] << endl;
+    cout << "AtB[2] " << setw(13) << setprecision(0) << fixed << AtB_ptr[2] << endl;
+    cout << "AtB[3] " << setw(13) << setprecision(0) << fixed << AtB_ptr[3] << endl;
+    cout << "AtB[4] " << setw(13) << setprecision(0) << fixed << AtB_ptr[4] << endl;
+    cout << "AtB[5] " << setw(13) << setprecision(0) << fixed << AtB_ptr[5] << endl;
+    exit(1);
 }
 
 static
@@ -909,12 +1103,12 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
     //cout << "AtB " << AtB << endl;
     //cout << "A " << A << endl;
     //cout << "B " << B << endl;
-    for(int i = 0; i < rows; i++)
-    {
-            //x.at<double>(i, 0) = x.at<double>(i, 0) / MUL;
-            if(isnan(x.at<double>(i, 0)))
-                exit(1);
-    }
+    //for(int i = 0; i < rows; i++)
+    //{
+    //        //x.at<double>(i, 0) = x.at<double>(i, 0) / MUL;
+    //        if(isnan(x.at<double>(i, 0)))
+    //            exit(1);
+    //}
     //cout << "x " << x << endl;
     //cout << "A*x " << AtA*x << endl;
     //cout << "B " << AtB << endl;
@@ -1109,7 +1303,8 @@ void calcFeatureYEquationCoeffs(double* C, const Point3d& p3d, double fy)
     double invz  = 1. / p3d.z;
 
     C[0] = -fy - (fy * p3d.y * p3d.y * invz * invz);
-    C[1] = fy * p3d.x * p3d.x * invz * invz;
+    //C[1] = fy * p3d.x * p3d.x * invz * invz;
+    C[1] = fy * p3d.x * p3d.y * invz * invz;
     C[2] = fy * p3d.x * invz;
     C[3] = 0;
     C[4] = fy * invz;
