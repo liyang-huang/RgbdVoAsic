@@ -24,6 +24,8 @@
 `include "./DataDelay.sv"
 `include "./IndirectCoe.sv"
 `include "./IndirectCalc.sv"
+`include "./MulAcc.sv"
+`include "./Matrix.sv"
 
 module CHIP_tb;
     import RgbdVoConfigPk::*;
@@ -149,6 +151,7 @@ module CHIP_tb;
     assign r_cx = 35'd5345221017;
     assign r_cy = 35'd4283223244;
 
+    logic                     id_start;
     logic                     id_valid;
     logic [ID_COE_BW-1:0]     Ax_0;
     logic [ID_COE_BW-1:0]     Ax_1;
@@ -165,10 +168,39 @@ module CHIP_tb;
     logic [H_SIZE_BW:0]       diffs_x;
     logic [V_SIZE_BW:0]       diffs_y;
 
+    logic [MATRIX_BW-1:0] Mat_00;
+    logic [MATRIX_BW-1:0] Mat_10;
+    logic [MATRIX_BW-1:0] Mat_20;
+    logic [MATRIX_BW-1:0] Mat_30;
+    logic [MATRIX_BW-1:0] Mat_40;
+    logic [MATRIX_BW-1:0] Mat_50;
+    logic [MATRIX_BW-1:0] Mat_11;
+    logic [MATRIX_BW-1:0] Mat_21;
+    logic [MATRIX_BW-1:0] Mat_31;
+    logic [MATRIX_BW-1:0] Mat_41;
+    logic [MATRIX_BW-1:0] Mat_51;
+    logic [MATRIX_BW-1:0] Mat_22;
+    logic [MATRIX_BW-1:0] Mat_32;
+    logic [MATRIX_BW-1:0] Mat_42;
+    logic [MATRIX_BW-1:0] Mat_52;
+    logic [MATRIX_BW-1:0] Mat_33;
+    logic [MATRIX_BW-1:0] Mat_43;
+    logic [MATRIX_BW-1:0] Mat_53;
+    logic [MATRIX_BW-1:0] Mat_44;
+    logic [MATRIX_BW-1:0] Mat_54;
+    logic [MATRIX_BW-1:0] Mat_55;
+    logic [MATRIX_BW-1:0] Vec_0;
+    logic [MATRIX_BW-1:0] Vec_1;
+    logic [MATRIX_BW-1:0] Vec_2;
+    logic [MATRIX_BW-1:0] Vec_3;
+    logic [MATRIX_BW-1:0] Vec_4;
+    logic [MATRIX_BW-1:0] Vec_5;
+                                
     IndirectCalc u_indirect_calc(
-        // input
+        // input                
          .i_clk     ( clk )
         ,.i_rst_n   ( rst_n)
+        ,.i_start   ( start )
         ,.i_valid   ( valid )
         ,.i_idx0_x  ( u0_i )
         ,.i_idx0_y  ( v0_i )
@@ -193,24 +225,89 @@ module CHIP_tb;
         ,.r_cx     ( r_cx )
         ,.r_cy     ( r_cy )
         // Output
-        ,.o_valid  ( id_valid )
-        ,.o_Ax_0  ( Ax_0 )
-        ,.o_Ax_1  ( Ax_1 )
-        ,.o_Ax_2  ( Ax_2 )
-        ,.o_Ax_3  ( Ax_3 )
-        ,.o_Ax_4  ( Ax_4 )
-        ,.o_Ax_5  ( Ax_5 )
-        ,.o_Ay_0  ( Ay_0 )
-        ,.o_Ay_1  ( Ay_1 )
-        ,.o_Ay_2  ( Ay_2 )
-        ,.o_Ay_3  ( Ay_3 )
-        ,.o_Ay_4  ( Ay_4 )
-        ,.o_Ay_5  ( Ay_5 )
+        ,.o_start    ( id_start )
+        ,.o_valid    ( id_valid )
+        ,.o_Ax_0     ( Ax_0 )
+        ,.o_Ax_1     ( Ax_1 )
+        ,.o_Ax_2     ( Ax_2 )
+        ,.o_Ax_3     ( Ax_3 )
+        ,.o_Ax_4     ( Ax_4 )
+        ,.o_Ax_5     ( Ax_5 )
+        ,.o_Ay_0     ( Ay_0 )
+        ,.o_Ay_1     ( Ay_1 )
+        ,.o_Ay_2     ( Ay_2 )
+        ,.o_Ay_3     ( Ay_3 )
+        ,.o_Ay_4     ( Ay_4 )
+        ,.o_Ay_5     ( Ay_5 )
         ,.o_diffs_x  ( diffs_x )
         ,.o_diffs_y  ( diffs_y )
     );
 
+    Matrix u_matrix(
+        // input
+         .i_clk      ( clk )
+        ,.i_rst_n    ( rst_n)
+        ,.i_start    ( id_start )
+        ,.i_valid    ( id_valid )
+        ,.i_Ax_0     ( Ax_0 )
+        ,.i_Ax_1     ( Ax_1 )
+        ,.i_Ax_2     ( Ax_2 )
+        ,.i_Ax_3     ( Ax_3 )
+        ,.i_Ax_4     ( Ax_4 )
+        ,.i_Ax_5     ( Ax_5 )
+        ,.i_Ay_0     ( Ay_0 )
+        ,.i_Ay_1     ( Ay_1 )
+        ,.i_Ay_2     ( Ay_2 )
+        ,.i_Ay_3     ( Ay_3 )
+        ,.i_Ay_4     ( Ay_4 )
+        ,.i_Ay_5     ( Ay_5 )
+        ,.i_diffs_x  ( diffs_x )
+        ,.i_diffs_y  ( diffs_y )
+        // Output
+        ,.o_Mat_00 ( Mat_00 ) 
+        ,.o_Mat_10 ( Mat_10 ) 
+        ,.o_Mat_20 ( Mat_20 ) 
+        ,.o_Mat_30 ( Mat_30 ) 
+        ,.o_Mat_40 ( Mat_40 ) 
+        ,.o_Mat_50 ( Mat_50 ) 
+        ,.o_Mat_11 ( Mat_11 ) 
+        ,.o_Mat_21 ( Mat_21 ) 
+        ,.o_Mat_31 ( Mat_31 ) 
+        ,.o_Mat_41 ( Mat_41 ) 
+        ,.o_Mat_51 ( Mat_51 ) 
+        ,.o_Mat_22 ( Mat_22 ) 
+        ,.o_Mat_32 ( Mat_32 ) 
+        ,.o_Mat_42 ( Mat_42 ) 
+        ,.o_Mat_52 ( Mat_52 ) 
+        ,.o_Mat_33 ( Mat_33 ) 
+        ,.o_Mat_43 ( Mat_43 ) 
+        ,.o_Mat_53 ( Mat_53 ) 
+        ,.o_Mat_44 ( Mat_44 ) 
+        ,.o_Mat_54 ( Mat_54 ) 
+        ,.o_Mat_55 ( Mat_55 ) 
+        ,.o_Vec_0 ( Vec_0 ) 
+        ,.o_Vec_1 ( Vec_1 ) 
+        ,.o_Vec_2 ( Vec_2 ) 
+        ,.o_Vec_3 ( Vec_3 ) 
+        ,.o_Vec_4 ( Vec_4 ) 
+        ,.o_Vec_5 ( Vec_5 ) 
+    );                     
+     
+    logic test_valid;                      
+    DataDelay
+    #(
+        .DATA_BW(1)
+       ,.STAGE(3)
+    ) u_valid_d4 (
+        // input
+         .i_clk(clk)
+        ,.i_rst_n(rst_n)
+        ,.i_data(id_valid)
+        // Output
+        ,.o_data(test_valid)
+    );
 
+                           
     always @(posedge clk)begin
         //if(cloud_valid) begin
         //  $fwrite(f1, "%d\n", $signed(cloud_x));
@@ -223,19 +320,21 @@ module CHIP_tb;
         //if(proj_valid) begin
         //    $fwrite(f1, "%d\n", proj_x);
         //    $fwrite(f1, "%d\n", proj_y);
-        if(id_valid) begin
-            $fwrite(f1, "%d\n", $signed(Ax_0));
-            $fwrite(f1, "%d\n", $signed(Ax_1));
-            $fwrite(f1, "%d\n", $signed(Ax_2));
-            $fwrite(f1, "%d\n", $signed(Ax_3));
-            $fwrite(f1, "%d\n", $signed(Ax_4));
-            $fwrite(f1, "%d\n", $signed(Ax_5));
-            $fwrite(f1, "%d\n", $signed(Ay_0));
-            $fwrite(f1, "%d\n", $signed(Ay_1));
-            $fwrite(f1, "%d\n", $signed(Ay_2));
-            $fwrite(f1, "%d\n", $signed(Ay_3));
-            $fwrite(f1, "%d\n", $signed(Ay_4));
-            $fwrite(f1, "%d\n", $signed(Ay_5));
+        //if(id_valid) begin
+        //    $fwrite(f1, "%d\n", $signed(Ax_0));
+        //    $fwrite(f1, "%d\n", $signed(Ax_1));
+        //    $fwrite(f1, "%d\n", $signed(Ax_2));
+        //    $fwrite(f1, "%d\n", $signed(Ax_3));
+        //    $fwrite(f1, "%d\n", $signed(Ax_4));
+        //    $fwrite(f1, "%d\n", $signed(Ax_5));
+        //    $fwrite(f1, "%d\n", $signed(Ay_0));
+        //    $fwrite(f1, "%d\n", $signed(Ay_1));
+        //    $fwrite(f1, "%d\n", $signed(Ay_2));
+        //    $fwrite(f1, "%d\n", $signed(Ay_3));
+        //    $fwrite(f1, "%d\n", $signed(Ay_4));
+        //    $fwrite(f1, "%d\n", $signed(Ay_5));
+        if(test_valid) begin
+            $fwrite(f1, "%d\n", $signed(Mat_10));
         end
     end
 

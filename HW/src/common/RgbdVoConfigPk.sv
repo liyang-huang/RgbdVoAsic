@@ -57,6 +57,7 @@ package RgbdVoConfigPk;
     parameter DEPTH_MAX_BW        = DATA_DEPTH_BW;
     parameter DEPTH_MIN_BW        = DATA_DEPTH_BW;
     parameter ID_COE_BW           = 42;
+    parameter MATRIX_BW           = 64;
 
    //=================================
    // Register Default Define
