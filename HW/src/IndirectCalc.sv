@@ -13,7 +13,8 @@ module IndirectCalc
     // input
      input                            i_clk
     ,input                            i_rst_n
-    ,input                            i_start
+    ,input                            i_frame_start
+    ,input                            i_frame_end
     ,input                            i_valid
     ,input        [H_SIZE_BW-1:0]     i_idx0_x
     ,input        [V_SIZE_BW-1:0]     i_idx0_y
@@ -38,7 +39,8 @@ module IndirectCalc
     ,input        [CX_BW-1:0]         r_cx
     ,input        [CY_BW-1:0]         r_cy
     // Output
-    ,output logic                     o_start
+    ,output logic                     o_frame_start
+    ,output logic                     o_frame_end
     ,output logic                     o_valid
     ,output logic [ID_COE_BW-1:0]     o_Ax_0
     ,output logic [ID_COE_BW-1:0]     o_Ax_1
@@ -210,13 +212,26 @@ module IndirectCalc
     #(
         .DATA_BW(1)
        ,.STAGE(12)
-    ) u_start_delay (
+    ) u_frame_start_delay (
         // input
          .i_clk(i_clk)
         ,.i_rst_n(i_rst_n)
-        ,.i_data(i_start)
+        ,.i_data(i_frame_start)
         // Output
-        ,.o_data(o_start)
+        ,.o_data(o_frame_start)
+    );
+
+    DataDelay
+    #(
+        .DATA_BW(1)
+       ,.STAGE(12)
+    ) u_frame_end_delay (
+        // input
+         .i_clk(i_clk)
+        ,.i_rst_n(i_rst_n)
+        ,.i_data(i_frame_end)
+        // Output
+        ,.o_data(o_frame_end)
     );
 
     //===================

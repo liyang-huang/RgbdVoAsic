@@ -13,7 +13,8 @@ module Matrix
     // input
      input                     i_clk
     ,input                     i_rst_n
-    ,input                     i_start
+    ,input                     i_frame_start
+    ,input                     i_frame_end
     ,input                     i_valid
     ,input [ID_COE_BW-1:0]     i_Ax_0
     ,input [ID_COE_BW-1:0]     i_Ax_1
@@ -30,6 +31,7 @@ module Matrix
     ,input [H_SIZE_BW:0]       i_diffs_x
     ,input [V_SIZE_BW:0]       i_diffs_y
     // Output
+    ,output logic                 o_frame_end
     ,output logic [MATRIX_BW-1:0] o_Mat_00
     ,output logic [MATRIX_BW-1:0] o_Mat_10
     ,output logic [MATRIX_BW-1:0] o_Mat_20
@@ -76,7 +78,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_0 )
         ,.i_data_x1 ( i_Ax_0 )
@@ -94,7 +96,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_1 )
         ,.i_data_x1 ( i_Ax_0 )
@@ -112,7 +114,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_2 )
         ,.i_data_x1 ( i_Ax_0 )
@@ -130,7 +132,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_3 )
         ,.i_data_x1 ( i_Ax_0 )
@@ -148,7 +150,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_4 )
         ,.i_data_x1 ( i_Ax_0 )
@@ -166,7 +168,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_5 )
         ,.i_data_x1 ( i_Ax_0 )
@@ -184,7 +186,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_1 )
         ,.i_data_x1 ( i_Ax_1 )
@@ -202,7 +204,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_2 )
         ,.i_data_x1 ( i_Ax_1 )
@@ -220,7 +222,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_3 )
         ,.i_data_x1 ( i_Ax_1 )
@@ -238,7 +240,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_4 )
         ,.i_data_x1 ( i_Ax_1 )
@@ -256,7 +258,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_5 )
         ,.i_data_x1 ( i_Ax_1 )
@@ -274,7 +276,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_2 )
         ,.i_data_x1 ( i_Ax_2 )
@@ -292,7 +294,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_3 )
         ,.i_data_x1 ( i_Ax_2 )
@@ -310,7 +312,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_4 )
         ,.i_data_x1 ( i_Ax_2 )
@@ -328,7 +330,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_5 )
         ,.i_data_x1 ( i_Ax_2 )
@@ -346,7 +348,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_3 )
         ,.i_data_x1 ( i_Ax_3 )
@@ -364,7 +366,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_4 )
         ,.i_data_x1 ( i_Ax_3 )
@@ -382,7 +384,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_5 )
         ,.i_data_x1 ( i_Ax_3 )
@@ -400,7 +402,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_4 )
         ,.i_data_x1 ( i_Ax_4 )
@@ -418,7 +420,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_5 )
         ,.i_data_x1 ( i_Ax_4 )
@@ -436,7 +438,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( i_Ax_5 )
         ,.i_data_x1 ( i_Ax_5 )
@@ -454,7 +456,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( {{(ID_COE_BW-H_SIZE_BW-1-MUL){i_diffs_x[H_SIZE_BW-1]}},i_diffs_x,{MUL{1'b0}}} )
         ,.i_data_x1 ( i_Ax_0 )
@@ -472,7 +474,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( {{(ID_COE_BW-H_SIZE_BW-1-MUL){i_diffs_x[H_SIZE_BW-1]}},i_diffs_x,{MUL{1'b0}}} )
         ,.i_data_x1 ( i_Ax_1 )
@@ -490,7 +492,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( {{(ID_COE_BW-H_SIZE_BW-1-MUL){i_diffs_x[H_SIZE_BW-1]}},i_diffs_x,{MUL{1'b0}}} )
         ,.i_data_x1 ( i_Ax_2 )
@@ -508,7 +510,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( {{(ID_COE_BW-H_SIZE_BW-1-MUL){i_diffs_x[H_SIZE_BW-1]}},i_diffs_x,{MUL{1'b0}}} )
         ,.i_data_x1 ( i_Ax_3 )
@@ -526,7 +528,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( {{(ID_COE_BW-H_SIZE_BW-1-MUL){i_diffs_x[H_SIZE_BW-1]}},i_diffs_x,{MUL{1'b0}}} )
         ,.i_data_x1 ( i_Ax_4 )
@@ -544,7 +546,7 @@ module Matrix
         // input
          .i_clk    ( i_clk )
         ,.i_rst_n  ( i_rst_n )
-        ,.i_start  ( i_start )
+        ,.i_start  ( i_frame_start )
         ,.i_valid  ( i_valid )
         ,.i_data_x0 ( {{(ID_COE_BW-H_SIZE_BW-1-MUL){i_diffs_x[H_SIZE_BW-1]}},i_diffs_x,{MUL{1'b0}}} )
         ,.i_data_x1 ( i_Ax_5 )
@@ -552,6 +554,19 @@ module Matrix
         ,.i_data_y1 ( i_Ay_5 )
         // Output
         ,.o_data    ( o_Vec_5 )
+    );
+
+    DataDelay
+    #(
+        .DATA_BW(1)
+       ,.STAGE(3)
+    ) u_frame_end_delay (
+        // input
+         .i_clk(i_clk)
+        ,.i_rst_n(i_rst_n)
+        ,.i_data(i_frame_end)
+        // Output
+        ,.o_data(o_frame_end)
     );
 
     //===================
