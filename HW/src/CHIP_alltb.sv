@@ -29,6 +29,7 @@
 `include "./MulAcc.sv"
 `include "./Matrix.sv"
 `include "./LDLT.sv"
+`include "./Solver.sv"
 
 module CHIP_tb;
     import RgbdVoConfigPk::*;
@@ -236,6 +237,14 @@ module CHIP_tb;
     logic [MATRIX_BW-1:0] LDLT_Mat_54;
     logic [MATRIX_BW-1:0] LDLT_Mat_55;
                                 
+    logic                 solver_done;
+    logic [MATRIX_BW-1:0] X0;
+    logic [MATRIX_BW-1:0] X1;
+    logic [MATRIX_BW-1:0] X2;
+    logic [MATRIX_BW-1:0] X3;
+    logic [MATRIX_BW-1:0] X4;
+    logic [MATRIX_BW-1:0] X5;
+                                
     IndirectCalc u_indirect_calc(
         // input                
          .i_clk         ( clk )
@@ -387,6 +396,51 @@ module CHIP_tb;
         ,.o_Mat_54      ( LDLT_Mat_54 ) 
         ,.o_Mat_55      ( LDLT_Mat_55 ) 
     );
+
+    Solver u_solver(
+        // input
+         .i_clk        ( clk )
+        ,.i_rst_n      ( rst_n)
+        ,.i_start      ( ldlt_done )
+        ,.i_Mat_00     ( LDLT_Mat_00 ) 
+        ,.i_Mat_10     ( LDLT_Mat_10 ) 
+        ,.i_Mat_20     ( LDLT_Mat_20 ) 
+        ,.i_Mat_30     ( LDLT_Mat_30 ) 
+        ,.i_Mat_40     ( LDLT_Mat_40 ) 
+        ,.i_Mat_50     ( LDLT_Mat_50 ) 
+        ,.i_Mat_11     ( LDLT_Mat_11 ) 
+        ,.i_Mat_21     ( LDLT_Mat_21 ) 
+        ,.i_Mat_31     ( LDLT_Mat_31 ) 
+        ,.i_Mat_41     ( LDLT_Mat_41 ) 
+        ,.i_Mat_51     ( LDLT_Mat_51 ) 
+        ,.i_Mat_22     ( LDLT_Mat_22 ) 
+        ,.i_Mat_32     ( LDLT_Mat_32 ) 
+        ,.i_Mat_42     ( LDLT_Mat_42 ) 
+        ,.i_Mat_52     ( LDLT_Mat_52 ) 
+        ,.i_Mat_33     ( LDLT_Mat_33 ) 
+        ,.i_Mat_43     ( LDLT_Mat_43 ) 
+        ,.i_Mat_53     ( LDLT_Mat_53 ) 
+        ,.i_Mat_44     ( LDLT_Mat_44 ) 
+        ,.i_Mat_54     ( LDLT_Mat_54 ) 
+        ,.i_Mat_55     ( LDLT_Mat_55 ) 
+        ,.i_Vec_0      ( Vec_0 ) 
+        ,.i_Vec_1      ( Vec_1 ) 
+        ,.i_Vec_2      ( Vec_2 ) 
+        ,.i_Vec_3      ( Vec_3 ) 
+        ,.i_Vec_4      ( Vec_4 ) 
+        ,.i_Vec_5      ( Vec_5 ) 
+        // Output
+        ,.o_done       ( solver_done)
+        ,.o_div_zero   (  )
+        ,.o_X0         ( X0 )
+        ,.o_X1         ( X1 )
+        ,.o_X2         ( X2 )
+        ,.o_X3         ( X3 )
+        ,.o_X4         ( X4 )
+        ,.o_X5         ( X5 )
+    );
+
+
 
     logic test_valid;                      
     DataDelay

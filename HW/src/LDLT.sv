@@ -66,8 +66,8 @@ module LDLT
     //=================================
     localparam IDLE = 1'b0 , BUSY = 1'b1;
     logic  state_r, state_w;
-    logic signed [MATRIX_BW - 1 : 0] Mat_r [0:35];	
-    logic signed [2 * MATRIX_BW - 1 : 0] Mat_w [0:35];
+    logic signed [MATRIX_BW - 1 : 0] Mat_r [36];	
+    logic signed [2 * MATRIX_BW - 1 : 0] Mat_w [36];
     logic [7:0] cnt_r, cnt_w;
     genvar i;
     integer j;
