@@ -40,6 +40,7 @@ const double max_value_lsm_f2 = pow(2.0, 41);
 const double max_value_lsm_f3 = pow(2.0, 41); 
 const double max_value_lsm_f4 = pow(2.0, 45); 
 const double max_value_lsm_f5 = pow(2.0, 51); //key 
+const double max_value_theta = pow(2.0, 34); //for design_ware sincos 
 
 double trunc(double num){
 	//return (num<0)?ceil(num):floor(num);
@@ -116,6 +117,19 @@ double trunc_lsm_f5(double num){
        {
            cout << "num: " << num << endl;
            cout << "In trunc_lsm_f5 " << endl;
+           exit(1);
+       }
+       if(num > 0)
+	   return floor(num);
+       else
+	   return ceil(num);
+}
+
+double trunc_theta(double num){
+       if(abs(num) > max_value_theta)
+       {
+           cout << "num: " << num << endl;
+           cout << "theta " << endl;
            exit(1);
        }
        if(num > 0)
@@ -1035,13 +1049,13 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
     //cout << "AtA[3][5] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(3,5) << endl;
     //cout << "AtA[4][5] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(4,5) << endl;
     //cout << "AtA[5][5] " << setw(13) << setprecision(0) << fixed << AtA.at<double>(5,5) << endl;
-    cout << "AtB[0] " << setw(13) << setprecision(0) << fixed << AtB_ptr[0] << endl;
-    cout << "AtB[1] " << setw(13) << setprecision(0) << fixed << AtB_ptr[1] << endl;
-    cout << "AtB[2] " << setw(13) << setprecision(0) << fixed << AtB_ptr[2] << endl;
-    cout << "AtB[3] " << setw(13) << setprecision(0) << fixed << AtB_ptr[3] << endl;
-    cout << "AtB[4] " << setw(13) << setprecision(0) << fixed << AtB_ptr[4] << endl;
-    cout << "AtB[5] " << setw(13) << setprecision(0) << fixed << AtB_ptr[5] << endl;
-    exit(1);
+    //cout << "AtB[0] " << setw(13) << setprecision(0) << fixed << AtB_ptr[0] << endl;
+    //cout << "AtB[1] " << setw(13) << setprecision(0) << fixed << AtB_ptr[1] << endl;
+    //cout << "AtB[2] " << setw(13) << setprecision(0) << fixed << AtB_ptr[2] << endl;
+    //cout << "AtB[3] " << setw(13) << setprecision(0) << fixed << AtB_ptr[3] << endl;
+    //cout << "AtB[4] " << setw(13) << setprecision(0) << fixed << AtB_ptr[4] << endl;
+    //cout << "AtB[5] " << setw(13) << setprecision(0) << fixed << AtB_ptr[5] << endl;
+    //exit(1);
 }
 
 static
@@ -1079,6 +1093,9 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
         }
     }
 
+    //cout << "AtA " << AtA << endl;
+    //cout << "A " << A << endl;
+    //cout << "B " << B << endl;
     for(int i = 0; i < rows; i++)
     {
         for(int k = 0; k < i; k++)
@@ -1097,6 +1114,8 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
             B.at<double>(i, 0) = B.at<double>(i, 0) - trunc6((A.at<double>(k, i) * B.at<double>(k, 0)) / MUL);
         }
     }
+    //cout << "B " << B << endl;
+    //exit(1);
 
     x = B;
     //cout << "AtA " << AtA << endl;
@@ -1173,7 +1192,7 @@ bool computeProjectiveMatrix(const Mat& ksi, Mat& Rt, double maxTranslation, dou
     r.x = rvec_fix.at<double>(0);
     r.y = rvec_fix.at<double>(1);
     r.z = rvec_fix.at<double>(2);
-    double theta = norm(r);
+    double theta = trunc_theta(norm(r));
 
     //CORDIC
     //vector<double> atan_table;
@@ -1203,8 +1222,6 @@ bool computeProjectiveMatrix(const Mat& ksi, Mat& Rt, double maxTranslation, dou
     //double s = y;
     double c = trunc1(cos(theta/MUL) * MUL);
     double s = trunc1(sin(theta/MUL) * MUL);
-    //double c = cos(theta);
-    //double s = sin(theta);
 
     double c1 = 1.*MUL - c;
     //double c1 = 1. - c;
@@ -1250,7 +1267,14 @@ bool computeProjectiveMatrix(const Mat& ksi, Mat& Rt, double maxTranslation, dou
     //    }
     //}
     //cout << "R_fix: " << R_fix <<endl;
+    //cout << "ksi: " << ksi <<endl;
     //cout << "Rt: " << Rt <<endl;
+    //cout << "translation: " << translation <<endl;
+    //cout << "theta: " << theta <<endl;
+    //cout << "theta/MUL: " << theta/MUL <<endl;
+    //cout << "cos: " << c <<endl;
+    //cout << "sin: " << s <<endl;
+    //cout << "1 - cos: " << c1 <<endl;
     //exit(1);
     return true;
 
@@ -1508,6 +1532,17 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                
                // cout << srcFrame->image.rows << " " << srcFrame->image.cols << endl;
                MYORB orb(FAST_N, FAST_threshold, FAST_orientation_patch_size, FAST_scorethreshold, FAST_edgethreshold, keypoints_num, MATCH_threshold, FAST_nlevels, FAST_scaling, srcFrame->image, dstFrame->image, DISPLAY, FIXED, TESTBENCH);
+               //#define FAST_N                          9
+               //#define FAST_threshold                  20
+               //#define FAST_orientation_patch_size     7
+               //#define FAST_scorethreshold             80
+               //#define FAST_edgethreshold              31
+               //#define keypoints_num                   500
+               //#define MATCH_threshold                 30
+               //#define DISPLAY                         false
+               //#define FIXED                           false
+               //#define DEBUG                           false
+               //MYORB orb(FAST_N, FAST_threshold, FAST_orientation_patch_size, FAST_scorethreshold, FAST_edgethreshold, keypoints_num, MATCH_threshold, srcFrame->image, dstFrame->image, srcFrame->depth, dstFrame->depth, DISPLAY, FIXED, DEBUG);
                std::vector<DMatch> matches = orb.Matching();
 
                // Delete matches without depth information
