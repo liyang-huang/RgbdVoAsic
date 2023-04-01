@@ -80,9 +80,15 @@ module Solver
     //=================================
     assign cnt_w = (state_r == IDLE)? 0: cnt_r + 1;
     assign o_done = done_r;
+    assign o_X0 = X_r[0];
+    assign o_X1 = X_r[1];
+    assign o_X2 = X_r[2];
+    assign o_X3 = X_r[3];
+    assign o_X4 = X_r[4];
+    assign o_X5 = X_r[5];
 	
 
-    assign product_add = product + {1'b0,{MUL{1'b1}}};
+    assign product_add = product + $signed({1'b0,{MUL{1'b1}}});
 
     always_comb begin
     	case(state_r)

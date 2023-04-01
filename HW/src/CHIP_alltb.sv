@@ -30,6 +30,10 @@
 `include "./Matrix.sv"
 `include "./LDLT.sv"
 `include "./Solver.sv"
+`include "./DW_sqrt.v"
+`include "./DW_sqrt_pipe.v"
+`include "./DW_sincos.v"
+`include "./Rodrigues.sv"
 
 module CHIP_tb;
     import RgbdVoConfigPk::*;
@@ -245,6 +249,20 @@ module CHIP_tb;
     logic [MATRIX_BW-1:0] X4;
     logic [MATRIX_BW-1:0] X5;
                                 
+    logic                 rodrigues_done;
+    logic [MATRIX_BW-1:0] pose0;
+    logic [MATRIX_BW-1:0] pose1;
+    logic [MATRIX_BW-1:0] pose2;
+    logic [MATRIX_BW-1:0] pose3;
+    logic [MATRIX_BW-1:0] pose4;
+    logic [MATRIX_BW-1:0] pose5;
+    logic [MATRIX_BW-1:0] pose6;
+    logic [MATRIX_BW-1:0] pose7;
+    logic [MATRIX_BW-1:0] pose8;
+    logic [MATRIX_BW-1:0] pose9;
+    logic [MATRIX_BW-1:0] pose10;
+    logic [MATRIX_BW-1:0] pose11;
+                                
     IndirectCalc u_indirect_calc(
         // input                
          .i_clk         ( clk )
@@ -438,6 +456,33 @@ module CHIP_tb;
         ,.o_X3         ( X3 )
         ,.o_X4         ( X4 )
         ,.o_X5         ( X5 )
+    );
+
+    Rodrigues u_rodrigues(
+        // input
+         .i_clk        ( clk )
+        ,.i_rst_n      ( rst_n)
+        ,.i_start      ( solver_done )
+        ,.i_X0         ( X0 )
+        ,.i_X1         ( X1 )
+        ,.i_X2         ( X2 )
+        ,.i_X3         ( X3 )
+        ,.i_X4         ( X4 )
+        ,.i_X5         ( X5 )
+        // Output
+        ,.o_done        ( rodrigues_done )
+        ,.o_pose0       ( pose0 )
+        ,.o_pose1       ( pose1 )
+        ,.o_pose2       ( pose2 )
+        ,.o_pose3       ( pose3 )
+        ,.o_pose4       ( pose4 )
+        ,.o_pose5       ( pose5 )
+        ,.o_pose6       ( pose6 )
+        ,.o_pose7       ( pose7 )
+        ,.o_pose8       ( pose8 )
+        ,.o_pose9       ( pose9 )
+        ,.o_pose10      ( pose10 )
+        ,.o_pose11      ( pose11 )
     );
 
 
