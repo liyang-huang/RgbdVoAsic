@@ -34,6 +34,7 @@
 `include "./DW_sqrt_pipe.v"
 `include "./DW_sincos.v"
 `include "./Rodrigues.sv"
+`include "./UpdatePose.sv"
 
 module CHIP_tb;
     import RgbdVoConfigPk::*;
@@ -165,6 +166,32 @@ module CHIP_tb;
     logic [34:0] r_fy;
     logic [34:0] r_cx;
     logic [34:0] r_cy;
+    logic [41:0] initial_pose [12];
+
+    //assign initial_pose[0]  = 42'd16777216;
+    //assign initial_pose[1]  = 42'd0;
+    //assign initial_pose[2]  = 42'd0;
+    //assign initial_pose[3]  = 42'd0;
+    //assign initial_pose[4]  = 42'd0;
+    //assign initial_pose[5]  = 42'd16777216;
+    //assign initial_pose[6]  = 42'd0;
+    //assign initial_pose[7]  = 42'd0;
+    //assign initial_pose[8]  = 42'd0;
+    //assign initial_pose[9]  = 42'd0;
+    //assign initial_pose[10] = 42'd16777216;
+    //assign initial_pose[11] = 42'd0;
+    assign initial_pose[0] = 42'sd16777012;
+    assign initial_pose[1] = -42'sd70417;
+    assign initial_pose[2] = 42'sd43303;
+    assign initial_pose[3] = 42'sd293953671;
+    assign initial_pose[4] = 42'sd69469;
+    assign initial_pose[5] = 42'sd16773180;
+    assign initial_pose[6] = 42'sd361290;
+    assign initial_pose[7] = 42'sd562249495;
+    assign initial_pose[8] = -42'sd44809;
+    assign initial_pose[9] = -42'sd361108;
+    assign initial_pose[10] = 42'sd16773268;
+    assign initial_pose[11] = -42'sd255191270;
 
     assign r_fx = 35'd8678853836;
     assign r_fy = 35'd8665432064;
@@ -263,6 +290,9 @@ module CHIP_tb;
     logic [MATRIX_BW-1:0] pose10;
     logic [MATRIX_BW-1:0] pose11;
                                 
+    logic        update_done;
+    logic [POSE_BW-1:0] update_pose [12];
+
     IndirectCalc u_indirect_calc(
         // input                
          .i_clk         ( clk )
@@ -275,18 +305,18 @@ module CHIP_tb;
         ,.i_depth0      ( z0_i )
         ,.i_idx1_x      ( u1_i )
         ,.i_idx1_y      ( v1_i )
-        ,.i_pose_0      ( 42'd16777216 )
-        ,.i_pose_1      ( 42'd0 )
-        ,.i_pose_2      ( 42'd0 )
-        ,.i_pose_3      ( 42'd0 )
-        ,.i_pose_4      ( 42'd0 )
-        ,.i_pose_5      ( 42'd16777216 )
-        ,.i_pose_6      ( 42'd0 )
-        ,.i_pose_7      ( 42'd0 )
-        ,.i_pose_8      ( 42'd0 )
-        ,.i_pose_9      ( 42'd0 )
-        ,.i_pose_10     ( 42'd16777216 )
-        ,.i_pose_11     ( 42'd0 )
+        ,.i_pose_0      ( initial_pose[0] )
+        ,.i_pose_1      ( initial_pose[1] )
+        ,.i_pose_2      ( initial_pose[2] )
+        ,.i_pose_3      ( initial_pose[3] )
+        ,.i_pose_4      ( initial_pose[4] )
+        ,.i_pose_5      ( initial_pose[5] )
+        ,.i_pose_6      ( initial_pose[6] )
+        ,.i_pose_7      ( initial_pose[7] )
+        ,.i_pose_8      ( initial_pose[8] )
+        ,.i_pose_9      ( initial_pose[9] )
+        ,.i_pose_10     ( initial_pose[10] )
+        ,.i_pose_11     ( initial_pose[11] )
         // Register
         ,.r_fx           ( r_fx )
         ,.r_fy           ( r_fy )
@@ -485,6 +515,39 @@ module CHIP_tb;
         ,.o_pose11      ( pose11 )
     );
 
+    UpdatePose u_updatepose (
+        // input
+         .i_clk        ( clk )
+        ,.i_rst_n      ( rst_n)
+        ,.i_start      ( rodrigues_done )
+        ,.i_delta_pose_0   ( pose0 )
+        ,.i_delta_pose_1   ( pose1 )
+        ,.i_delta_pose_2   ( pose2 )
+        ,.i_delta_pose_3   ( pose3 )
+        ,.i_delta_pose_4   ( pose4 )
+        ,.i_delta_pose_5   ( pose5 )
+        ,.i_delta_pose_6   ( pose6 )
+        ,.i_delta_pose_7   ( pose7 )
+        ,.i_delta_pose_8   ( pose8 )
+        ,.i_delta_pose_9   ( pose9 )
+        ,.i_delta_pose_10  ( pose10 )
+        ,.i_delta_pose_11  ( pose11 )
+        ,.i_pose_0   ( initial_pose[0] )
+        ,.i_pose_1   ( initial_pose[1] )
+        ,.i_pose_2   ( initial_pose[2] )
+        ,.i_pose_3   ( initial_pose[3] )
+        ,.i_pose_4   ( initial_pose[4] )
+        ,.i_pose_5   ( initial_pose[5] )
+        ,.i_pose_6   ( initial_pose[6] )
+        ,.i_pose_7   ( initial_pose[7] )
+        ,.i_pose_8   ( initial_pose[8] )
+        ,.i_pose_9   ( initial_pose[9] )
+        ,.i_pose_10  ( initial_pose[10] )
+        ,.i_pose_11  ( initial_pose[11] )
+        // Output
+        ,.o_done     ( update_done )
+        ,.o_pose     ( update_pose )
+    );
 
 
     logic test_valid;                      
