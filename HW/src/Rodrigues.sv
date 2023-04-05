@@ -22,18 +22,7 @@ module Rodrigues
     ,input [MATRIX_BW-1:0] i_X5
     // Output
     ,output logic                 o_done
-    ,output logic [MATRIX_BW-1:0] o_pose0
-    ,output logic [MATRIX_BW-1:0] o_pose1
-    ,output logic [MATRIX_BW-1:0] o_pose2
-    ,output logic [MATRIX_BW-1:0] o_pose3
-    ,output logic [MATRIX_BW-1:0] o_pose4
-    ,output logic [MATRIX_BW-1:0] o_pose5
-    ,output logic [MATRIX_BW-1:0] o_pose6
-    ,output logic [MATRIX_BW-1:0] o_pose7
-    ,output logic [MATRIX_BW-1:0] o_pose8
-    ,output logic [MATRIX_BW-1:0] o_pose9
-    ,output logic [MATRIX_BW-1:0] o_pose10
-    ,output logic [MATRIX_BW-1:0] o_pose11
+    ,output logic [POSE_BW-1:0]   o_pose [12]
 );
 
     //=================================
@@ -52,7 +41,7 @@ module Rodrigues
     logic [7:0] cnt_r, cnt_w;
     genvar i;
     integer j, m, n;
-    logic signed [MATRIX_BW-1:0] a;
+    logic signed [2*MATRIX_BW+1:0] a;
     logic signed [MATRIX_BW:0] root;
     logic signed [MATRIX_BW-1:0] c, d;
     logic signed [MATRIX_BW+MATRIX_BW-1:0] product;
@@ -82,18 +71,11 @@ module Rodrigues
     //=================================
     assign cnt_w = (state_r == IDLE)? 0: cnt_r + 1;
     assign o_done = done_r;
-    assign o_pose0 = pose_r[0];	
-    assign o_pose1 = pose_r[1];	
-    assign o_pose2 = pose_r[2];	
-    assign o_pose3 = pose_r[3];	
-    assign o_pose4 = pose_r[4];	
-    assign o_pose5 = pose_r[5];	
-    assign o_pose6 = pose_r[6];	
-    assign o_pose7 = pose_r[7];	
-    assign o_pose8 = pose_r[8];	
-    assign o_pose9 = pose_r[9];	
-    assign o_pose10 = pose_r[10];	
-    assign o_pose11 = pose_r[11];	
+    generate
+    for (i = 0; i < 12 ; i = i + 1) begin
+        assign o_pose[i] = pose_r[i];	
+    end
+    endgenerate
 
     assign product_add = product + $signed({1'b0,{MUL{1'b1}}});
 
@@ -150,7 +132,7 @@ module Rodrigues
         ,.rst_n(i_rst_n)
         ,.en(1'b1)
         ,.a({theta_r,{33{1'b0}}})
-        ,.b('d52707178) //3.14159265*2^24
+        ,.b(28'd52707178) //3.14159265*2^24
         ,.quotient(quotient)
         ,.remainder()
         ,.divide_by_0()

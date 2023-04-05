@@ -22,19 +22,7 @@ module TransMat
     ,input        [CLOUD_BW-1:0]      i_cloud_y
     ,input        [CLOUD_BW-1:0]      i_cloud_z
     //,input                            i_pose_valid
-    //,input        [POSE_BW-1:0]       i_pose        [12]  //3x4 matrix
-    ,input        [POSE_BW-1:0]       i_pose_0
-    ,input        [POSE_BW-1:0]       i_pose_1
-    ,input        [POSE_BW-1:0]       i_pose_2
-    ,input        [POSE_BW-1:0]       i_pose_3
-    ,input        [POSE_BW-1:0]       i_pose_4
-    ,input        [POSE_BW-1:0]       i_pose_5
-    ,input        [POSE_BW-1:0]       i_pose_6
-    ,input        [POSE_BW-1:0]       i_pose_7
-    ,input        [POSE_BW-1:0]       i_pose_8
-    ,input        [POSE_BW-1:0]       i_pose_9
-    ,input        [POSE_BW-1:0]       i_pose_10
-    ,input        [POSE_BW-1:0]       i_pose_11
+    ,input        [POSE_BW-1:0]       i_pose        [12]  //3x4 matrix
     // Register
     // Output
     ,output logic                     o_valid
@@ -80,7 +68,7 @@ module TransMat
         ,.B_width(POSE_BW)
     ) u_tpx_tmp1 (
          .A(i_cloud_x)
-        ,.B(i_pose_0)
+        ,.B(i_pose[0])
         ,.TC(1'b1)
         ,.CLK(i_clk)
         ,.PRODUCT(tpx_tmp1)
@@ -91,7 +79,7 @@ module TransMat
         ,.B_width(POSE_BW)
     ) u_tpx_tmp2 (
          .A(i_cloud_y)
-        ,.B(i_pose_1)
+        ,.B(i_pose[1])
         ,.TC(1'b1)
         ,.CLK(i_clk)
         ,.PRODUCT(tpx_tmp2)
@@ -102,7 +90,7 @@ module TransMat
         ,.B_width(POSE_BW)
     ) u_tpx_tmp3 (
          .A(i_cloud_z)
-        ,.B(i_pose_2)
+        ,.B(i_pose[2])
         ,.TC(1'b1)
         ,.CLK(i_clk)
         ,.PRODUCT(tpx_tmp3)
@@ -113,7 +101,7 @@ module TransMat
         ,.B_width(POSE_BW)
     ) u_tpy_tmp1 (
          .A(i_cloud_x)
-        ,.B(i_pose_4)
+        ,.B(i_pose[4])
         ,.TC(1'b1)
         ,.CLK(i_clk)
         ,.PRODUCT(tpy_tmp1)
@@ -124,7 +112,7 @@ module TransMat
         ,.B_width(POSE_BW)
     ) u_tpy_tmp2 (
          .A(i_cloud_y)
-        ,.B(i_pose_5)
+        ,.B(i_pose[5])
         ,.TC(1'b1)
         ,.CLK(i_clk)
         ,.PRODUCT(tpy_tmp2)
@@ -135,7 +123,7 @@ module TransMat
         ,.B_width(POSE_BW)
     ) u_tpy_tmp3 (
          .A(i_cloud_z)
-        ,.B(i_pose_6)
+        ,.B(i_pose[6])
         ,.TC(1'b1)
         ,.CLK(i_clk)
         ,.PRODUCT(tpy_tmp3)
@@ -146,7 +134,7 @@ module TransMat
         ,.B_width(POSE_BW)
     ) u_tpz_tmp1 (
          .A(i_cloud_x)
-        ,.B(i_pose_8)
+        ,.B(i_pose[8])
         ,.TC(1'b1)
         ,.CLK(i_clk)
         ,.PRODUCT(tpz_tmp1)
@@ -157,7 +145,7 @@ module TransMat
         ,.B_width(POSE_BW)
     ) u_tpz_tmp2 (
          .A(i_cloud_y)
-        ,.B(i_pose_9)
+        ,.B(i_pose[9])
         ,.TC(1'b1)
         ,.CLK(i_clk)
         ,.PRODUCT(tpz_tmp2)
@@ -168,7 +156,7 @@ module TransMat
         ,.B_width(POSE_BW)
     ) u_tpz_tmp3 (
          .A(i_cloud_z)
-        ,.B(i_pose_10)
+        ,.B(i_pose[10])
         ,.TC(1'b1)
         ,.CLK(i_clk)
         ,.PRODUCT(tpz_tmp3)
@@ -198,7 +186,7 @@ module TransMat
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if (!i_rst_n) tpx_tmp5_r <= '0;
-        else tpx_tmp5_r <= tpx_tmp3[CLOUD_BW+POSE_BW-1:MUL] + i_pose_3;
+        else tpx_tmp5_r <= tpx_tmp3[CLOUD_BW+POSE_BW-1:MUL] + i_pose[3];
     end
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
@@ -213,7 +201,7 @@ module TransMat
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if (!i_rst_n) tpy_tmp5_r <= '0;
-        else tpy_tmp5_r <= tpy_tmp3[CLOUD_BW+POSE_BW-1:MUL] + i_pose_7;
+        else tpy_tmp5_r <= tpy_tmp3[CLOUD_BW+POSE_BW-1:MUL] + i_pose[7];
     end
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
@@ -228,7 +216,7 @@ module TransMat
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if (!i_rst_n) tpz_tmp5_r <= '0;
-        else tpz_tmp5_r <= tpz_tmp3[CLOUD_BW+POSE_BW-1:MUL] + i_pose_11;
+        else tpz_tmp5_r <= tpz_tmp3[CLOUD_BW+POSE_BW-1:MUL] + i_pose[11];
     end
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin

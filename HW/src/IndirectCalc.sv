@@ -21,18 +21,7 @@ module IndirectCalc
     ,input        [DATA_DEPTH_BW-1:0] i_depth0
     ,input        [H_SIZE_BW-1:0]     i_idx1_x
     ,input        [V_SIZE_BW-1:0]     i_idx1_y
-    ,input        [POSE_BW-1:0]       i_pose_0
-    ,input        [POSE_BW-1:0]       i_pose_1
-    ,input        [POSE_BW-1:0]       i_pose_2
-    ,input        [POSE_BW-1:0]       i_pose_3
-    ,input        [POSE_BW-1:0]       i_pose_4
-    ,input        [POSE_BW-1:0]       i_pose_5
-    ,input        [POSE_BW-1:0]       i_pose_6
-    ,input        [POSE_BW-1:0]       i_pose_7
-    ,input        [POSE_BW-1:0]       i_pose_8
-    ,input        [POSE_BW-1:0]       i_pose_9
-    ,input        [POSE_BW-1:0]       i_pose_10
-    ,input        [POSE_BW-1:0]       i_pose_11
+    ,input        [POSE_BW-1:0]       i_pose [12]
     // Register
     ,input        [FX_BW-1:0]         r_fx
     ,input        [FY_BW-1:0]         r_fy
@@ -113,18 +102,7 @@ module IndirectCalc
         ,.i_cloud_x  ( cloud_x )
         ,.i_cloud_y  ( cloud_y )
         ,.i_cloud_z  ( cloud_z )
-        ,.i_pose_0   ( i_pose_0  )
-        ,.i_pose_1   ( i_pose_1  )
-        ,.i_pose_2   ( i_pose_2  )
-        ,.i_pose_3   ( i_pose_3  )
-        ,.i_pose_4   ( i_pose_4  )
-        ,.i_pose_5   ( i_pose_5  )
-        ,.i_pose_6   ( i_pose_6  )
-        ,.i_pose_7   ( i_pose_7  )
-        ,.i_pose_8   ( i_pose_8  )
-        ,.i_pose_9   ( i_pose_9  )
-        ,.i_pose_10  ( i_pose_10 )
-        ,.i_pose_11  ( i_pose_11 )
+        ,.i_pose     ( i_pose  )
         // Output
         ,.o_valid    ( trans_valid )
         ,.o_cloud_x  ( trans_x )

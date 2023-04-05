@@ -14,30 +14,8 @@ module UpdatePose
      input                 i_clk
     ,input                 i_rst_n
     ,input                 i_start
-    ,input [POSE_BW-1:0]   i_delta_pose_0
-    ,input [POSE_BW-1:0]   i_delta_pose_1
-    ,input [POSE_BW-1:0]   i_delta_pose_2
-    ,input [POSE_BW-1:0]   i_delta_pose_3
-    ,input [POSE_BW-1:0]   i_delta_pose_4
-    ,input [POSE_BW-1:0]   i_delta_pose_5
-    ,input [POSE_BW-1:0]   i_delta_pose_6
-    ,input [POSE_BW-1:0]   i_delta_pose_7
-    ,input [POSE_BW-1:0]   i_delta_pose_8
-    ,input [POSE_BW-1:0]   i_delta_pose_9
-    ,input [POSE_BW-1:0]   i_delta_pose_10
-    ,input [POSE_BW-1:0]   i_delta_pose_11
-    ,input [POSE_BW-1:0]   i_pose_0
-    ,input [POSE_BW-1:0]   i_pose_1
-    ,input [POSE_BW-1:0]   i_pose_2
-    ,input [POSE_BW-1:0]   i_pose_3
-    ,input [POSE_BW-1:0]   i_pose_4
-    ,input [POSE_BW-1:0]   i_pose_5
-    ,input [POSE_BW-1:0]   i_pose_6
-    ,input [POSE_BW-1:0]   i_pose_7
-    ,input [POSE_BW-1:0]   i_pose_8
-    ,input [POSE_BW-1:0]   i_pose_9
-    ,input [POSE_BW-1:0]   i_pose_10
-    ,input [POSE_BW-1:0]   i_pose_11
+    ,input [POSE_BW-1:0]   i_delta_pose [12]
+    ,input [POSE_BW-1:0]   i_pose [12]
     // Output
     ,output logic               o_done
     ,output logic [POSE_BW-1:0] o_pose [12]
@@ -85,44 +63,44 @@ module UpdatePose
 
     always_comb begin
         case(cnt_r)     
-            'd1:  begin a = delta_r[0]; b = i_pose_0; end
-            'd3:  begin a = delta_r[1]; b = i_pose_4; end
-            'd5:  begin a = delta_r[2]; b = i_pose_8; end
-            'd7:  begin a = delta_r[0]; b = i_pose_1; end
-            'd9:  begin a = delta_r[1]; b = i_pose_5; end
-            'd11: begin a = delta_r[2]; b = i_pose_9; end
-            'd13: begin a = delta_r[0]; b = i_pose_2; end
-            'd15: begin a = delta_r[1]; b = i_pose_6; end
-            'd17: begin a = delta_r[2]; b = i_pose_10; end
-            'd19: begin a = delta_r[0]; b = i_pose_3; end
-            'd21: begin a = delta_r[1]; b = i_pose_7; end
-            'd23: begin a = delta_r[2]; b = i_pose_11; end
+            'd1:  begin a = delta_r[0]; b = i_pose[0]; end
+            'd3:  begin a = delta_r[1]; b = i_pose[4]; end
+            'd5:  begin a = delta_r[2]; b = i_pose[8]; end
+            'd7:  begin a = delta_r[0]; b = i_pose[1]; end
+            'd9:  begin a = delta_r[1]; b = i_pose[5]; end
+            'd11: begin a = delta_r[2]; b = i_pose[9]; end
+            'd13: begin a = delta_r[0]; b = i_pose[2]; end
+            'd15: begin a = delta_r[1]; b = i_pose[6]; end
+            'd17: begin a = delta_r[2]; b = i_pose[10]; end
+            'd19: begin a = delta_r[0]; b = i_pose[3]; end
+            'd21: begin a = delta_r[1]; b = i_pose[7]; end
+            'd23: begin a = delta_r[2]; b = i_pose[11]; end
             'd25: begin a = delta_r[3]; b = 42'sd16777216; end
-            'd27: begin a = delta_r[4]; b = i_pose_0; end
-            'd29: begin a = delta_r[5]; b = i_pose_4; end
-            'd31: begin a = delta_r[6]; b = i_pose_8; end
-            'd33: begin a = delta_r[4]; b = i_pose_1; end
-            'd35: begin a = delta_r[5]; b = i_pose_5; end
-            'd37: begin a = delta_r[6]; b = i_pose_9; end
-            'd39: begin a = delta_r[4]; b = i_pose_2; end
-            'd41: begin a = delta_r[5]; b = i_pose_6; end
-            'd43: begin a = delta_r[6]; b = i_pose_10; end
-            'd45: begin a = delta_r[4]; b = i_pose_3; end
-            'd47: begin a = delta_r[5]; b = i_pose_7; end
-            'd49: begin a = delta_r[6]; b = i_pose_11; end
+            'd27: begin a = delta_r[4]; b = i_pose[0]; end
+            'd29: begin a = delta_r[5]; b = i_pose[4]; end
+            'd31: begin a = delta_r[6]; b = i_pose[8]; end
+            'd33: begin a = delta_r[4]; b = i_pose[1]; end
+            'd35: begin a = delta_r[5]; b = i_pose[5]; end
+            'd37: begin a = delta_r[6]; b = i_pose[9]; end
+            'd39: begin a = delta_r[4]; b = i_pose[2]; end
+            'd41: begin a = delta_r[5]; b = i_pose[6]; end
+            'd43: begin a = delta_r[6]; b = i_pose[10]; end
+            'd45: begin a = delta_r[4]; b = i_pose[3]; end
+            'd47: begin a = delta_r[5]; b = i_pose[7]; end
+            'd49: begin a = delta_r[6]; b = i_pose[11]; end
             'd51: begin a = delta_r[7]; b = 42'sd16777216; end
-            'd53: begin a = delta_r[8]; b = i_pose_0; end
-            'd55: begin a = delta_r[9]; b = i_pose_4; end
-            'd57: begin a = delta_r[10]; b = i_pose_8; end
-            'd59: begin a = delta_r[8]; b = i_pose_1; end
-            'd61: begin a = delta_r[9]; b = i_pose_5; end
-            'd63: begin a = delta_r[10]; b = i_pose_9; end
-            'd65: begin a = delta_r[8]; b = i_pose_2; end
-            'd67: begin a = delta_r[9]; b = i_pose_6; end
-            'd69: begin a = delta_r[10]; b = i_pose_10; end
-            'd71: begin a = delta_r[8]; b = i_pose_3; end
-            'd73: begin a = delta_r[9]; b = i_pose_7; end
-            'd75: begin a = delta_r[10]; b = i_pose_11; end
+            'd53: begin a = delta_r[8]; b = i_pose[0]; end
+            'd55: begin a = delta_r[9]; b = i_pose[4]; end
+            'd57: begin a = delta_r[10]; b = i_pose[8]; end
+            'd59: begin a = delta_r[8]; b = i_pose[1]; end
+            'd61: begin a = delta_r[9]; b = i_pose[5]; end
+            'd63: begin a = delta_r[10]; b = i_pose[9]; end
+            'd65: begin a = delta_r[8]; b = i_pose[2]; end
+            'd67: begin a = delta_r[9]; b = i_pose[6]; end
+            'd69: begin a = delta_r[10]; b = i_pose[10]; end
+            'd71: begin a = delta_r[8]; b = i_pose[3]; end
+            'd73: begin a = delta_r[9]; b = i_pose[7]; end
+            'd75: begin a = delta_r[10]; b = i_pose[11]; end
             'd77: begin a = delta_r[11]; b = 42'sd16777216; end
             default: begin a = 0; b = 0;end
         endcase
@@ -201,18 +179,8 @@ module UpdatePose
 	
     always_comb begin
         if(i_start) begin
-            delta_w[0] = i_delta_pose_0;				
-            delta_w[1] = i_delta_pose_1;				
-            delta_w[2] = i_delta_pose_2;				
-            delta_w[3] = i_delta_pose_3;				
-            delta_w[4] = i_delta_pose_4;				
-            delta_w[5] = i_delta_pose_5;				
-            delta_w[6] = i_delta_pose_6;				
-            delta_w[7] = i_delta_pose_7;				
-            delta_w[8] = i_delta_pose_8;				
-            delta_w[9] = i_delta_pose_9;				
-            delta_w[10] = i_delta_pose_10;				
-            delta_w[11] = i_delta_pose_11;				
+            for (m= 0; m < 12 ; m = m + 1) 
+                delta_w[m] = i_delta_pose[m];				
         end
         else begin
             for (m= 0; m < 12 ; m = m + 1) 

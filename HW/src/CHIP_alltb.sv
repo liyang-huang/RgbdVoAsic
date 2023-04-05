@@ -276,19 +276,8 @@ module CHIP_tb;
     logic [MATRIX_BW-1:0] X4;
     logic [MATRIX_BW-1:0] X5;
                                 
-    logic                 rodrigues_done;
-    logic [MATRIX_BW-1:0] pose0;
-    logic [MATRIX_BW-1:0] pose1;
-    logic [MATRIX_BW-1:0] pose2;
-    logic [MATRIX_BW-1:0] pose3;
-    logic [MATRIX_BW-1:0] pose4;
-    logic [MATRIX_BW-1:0] pose5;
-    logic [MATRIX_BW-1:0] pose6;
-    logic [MATRIX_BW-1:0] pose7;
-    logic [MATRIX_BW-1:0] pose8;
-    logic [MATRIX_BW-1:0] pose9;
-    logic [MATRIX_BW-1:0] pose10;
-    logic [MATRIX_BW-1:0] pose11;
+    logic               rodrigues_done;
+    logic [POSE_BW-1:0] pose [12];
                                 
     logic        update_done;
     logic [POSE_BW-1:0] update_pose [12];
@@ -305,18 +294,7 @@ module CHIP_tb;
         ,.i_depth0      ( z0_i )
         ,.i_idx1_x      ( u1_i )
         ,.i_idx1_y      ( v1_i )
-        ,.i_pose_0      ( initial_pose[0] )
-        ,.i_pose_1      ( initial_pose[1] )
-        ,.i_pose_2      ( initial_pose[2] )
-        ,.i_pose_3      ( initial_pose[3] )
-        ,.i_pose_4      ( initial_pose[4] )
-        ,.i_pose_5      ( initial_pose[5] )
-        ,.i_pose_6      ( initial_pose[6] )
-        ,.i_pose_7      ( initial_pose[7] )
-        ,.i_pose_8      ( initial_pose[8] )
-        ,.i_pose_9      ( initial_pose[9] )
-        ,.i_pose_10     ( initial_pose[10] )
-        ,.i_pose_11     ( initial_pose[11] )
+        ,.i_pose        ( initial_pose )
         // Register
         ,.r_fx           ( r_fx )
         ,.r_fy           ( r_fy )
@@ -501,18 +479,7 @@ module CHIP_tb;
         ,.i_X5         ( X5 )
         // Output
         ,.o_done        ( rodrigues_done )
-        ,.o_pose0       ( pose0 )
-        ,.o_pose1       ( pose1 )
-        ,.o_pose2       ( pose2 )
-        ,.o_pose3       ( pose3 )
-        ,.o_pose4       ( pose4 )
-        ,.o_pose5       ( pose5 )
-        ,.o_pose6       ( pose6 )
-        ,.o_pose7       ( pose7 )
-        ,.o_pose8       ( pose8 )
-        ,.o_pose9       ( pose9 )
-        ,.o_pose10      ( pose10 )
-        ,.o_pose11      ( pose11 )
+        ,.o_pose        ( pose )
     );
 
     UpdatePose u_updatepose (
@@ -520,30 +487,8 @@ module CHIP_tb;
          .i_clk        ( clk )
         ,.i_rst_n      ( rst_n)
         ,.i_start      ( rodrigues_done )
-        ,.i_delta_pose_0   ( pose0 )
-        ,.i_delta_pose_1   ( pose1 )
-        ,.i_delta_pose_2   ( pose2 )
-        ,.i_delta_pose_3   ( pose3 )
-        ,.i_delta_pose_4   ( pose4 )
-        ,.i_delta_pose_5   ( pose5 )
-        ,.i_delta_pose_6   ( pose6 )
-        ,.i_delta_pose_7   ( pose7 )
-        ,.i_delta_pose_8   ( pose8 )
-        ,.i_delta_pose_9   ( pose9 )
-        ,.i_delta_pose_10  ( pose10 )
-        ,.i_delta_pose_11  ( pose11 )
-        ,.i_pose_0   ( initial_pose[0] )
-        ,.i_pose_1   ( initial_pose[1] )
-        ,.i_pose_2   ( initial_pose[2] )
-        ,.i_pose_3   ( initial_pose[3] )
-        ,.i_pose_4   ( initial_pose[4] )
-        ,.i_pose_5   ( initial_pose[5] )
-        ,.i_pose_6   ( initial_pose[6] )
-        ,.i_pose_7   ( initial_pose[7] )
-        ,.i_pose_8   ( initial_pose[8] )
-        ,.i_pose_9   ( initial_pose[9] )
-        ,.i_pose_10  ( initial_pose[10] )
-        ,.i_pose_11  ( initial_pose[11] )
+        ,.i_delta_pose ( pose )
+        ,.i_pose       ( initial_pose )
         // Output
         ,.o_done     ( update_done )
         ,.o_pose     ( update_pose )
