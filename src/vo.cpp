@@ -826,7 +826,7 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
             AtA.at<double>(x,y) = AtA.at<double>(y,x);
 }
 
-void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
+void calcFeatureLsmMatrices(const int iter, const Mat& cloud0, const Mat& Rt,
                const Mat& corresps, double fx, double fy, double cx, double cy,
                Mat& AtA, Mat& AtB, CalcFeatureXEquationCoeffsPtr func_x, CalcFeatureYEquationCoeffsPtr func_y, int transformDim)
 {
@@ -862,6 +862,36 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
         tp0.x = trunc_lsm_f1(p0.x * Rt_ptr[0] / MUL) + trunc_lsm_f1(p0.y * Rt_ptr[1] / MUL) + trunc_lsm_f1(p0.z * Rt_ptr[2]  / MUL) + Rt_ptr[3] ;
         tp0.y = trunc_lsm_f1(p0.x * Rt_ptr[4] / MUL) + trunc_lsm_f1(p0.y * Rt_ptr[5] / MUL) + trunc_lsm_f1(p0.z * Rt_ptr[6]  / MUL) + Rt_ptr[7] ;
         tp0.z = trunc_lsm_f1(p0.x * Rt_ptr[8] / MUL) + trunc_lsm_f1(p0.y * Rt_ptr[9] / MUL) + trunc_lsm_f1(p0.z * Rt_ptr[10] / MUL) + Rt_ptr[11];
+        //mpz_t p0_x;
+        //mpz_t p0_y;
+        //mpz_t p0_z;
+        //mpz_t Rt_4;
+        //mpz_t Rt_5;
+        //mpz_t Rt_6;
+        //mpz_t MUL_gmp;
+        //mpz_init_set_d(MUL_gmp, MUL);
+        //mpz_init_set_d(p0_x, p0.x);
+        //mpz_init_set_d(p0_y, p0.y);
+        //mpz_init_set_d(p0_z, p0.z);
+        //mpz_init_set_d(Rt_4, Rt_ptr[4]);
+        //mpz_init_set_d(Rt_5, Rt_ptr[5]);
+        //mpz_init_set_d(Rt_6, Rt_ptr[6]);
+        //mpz_mul(Rt_4,p0_x,Rt_4);
+        //mpz_mul(Rt_5,p0_y,Rt_5);
+        //mpz_mul(Rt_6,p0_z,Rt_6);
+        //mpz_div(Rt_4,Rt_4,MUL_gmp);
+        //mpz_div(Rt_5,Rt_5,MUL_gmp);
+        //mpz_div(Rt_6,Rt_6,MUL_gmp);
+        //double test4 = mpz_get_d(Rt_4);
+        //double test5 = mpz_get_d(Rt_5);
+        //double test6 = mpz_get_d(Rt_6);
+        //tp0.y = trunc_lsm_f1(test4) + trunc_lsm_f1(test5) + trunc_lsm_f1(test6) + Rt_ptr[7] ;
+        //cout << "p0_x " << fixed << p0.x << endl;
+        //cout << "Rt_4 " << fixed << Rt_ptr[4] << endl;
+        //cout << "Rt_5 " << fixed << Rt_ptr[5] << endl;
+        //cout << "Rt_6 " << fixed << Rt_ptr[6] << endl;
+        //cout << "tp0.y " << fixed << tp0.y << endl;
+        //exit(1);
         //int p2d_x = cvRound( (trunc1(trunc1(fx * MUL) * tp0.x / tp0.z) + trunc1(cx * MUL)) / MUL);
         //int p2d_y = cvRound( (trunc1(trunc1(fy * MUL) * tp0.y / tp0.z) + trunc1(cy * MUL)) / MUL);
         int p2d_x = trunc_lsm_f2( (trunc_lsm_f2(trunc_lsm_f2(fx * MUL) * tp0.x / tp0.z) + trunc_lsm_f2(cx * MUL)) / MUL);
@@ -882,27 +912,30 @@ void calcFeatureLsmMatrices(const Mat& cloud0, const Mat& Rt,
         //cout << "v1 " << v1 << endl;
         //int z0 = trunc_lsm_f1(p0.z/MUL);
         //cout << "z0 " << z0 << endl;
-        //cout << "Rt[0] "  << fixed << Rt_ptr[0] << endl;
-        //cout << "Rt[1] "  << fixed << Rt_ptr[1] << endl;
-        //cout << "Rt[2] "  << fixed << Rt_ptr[2] << endl;
-        //cout << "Rt[3] "  << fixed << Rt_ptr[3] << endl;
-        //cout << "Rt[4] "  << fixed << Rt_ptr[4] << endl;
-        //cout << "Rt[5] "  << fixed << Rt_ptr[5] << endl;
-        //cout << "Rt[6] "  << fixed << Rt_ptr[6] << endl;
-        //cout << "Rt[7] "  << fixed << Rt_ptr[7] << endl;
-        //cout << "Rt[8] "  << fixed << Rt_ptr[8] << endl;
-        //cout << "Rt[9] "  << fixed << Rt_ptr[9] << endl;
-        //cout << "Rt[10] " << fixed << Rt_ptr[10] << endl;
-        //cout << "Rt[11] " << fixed << Rt_ptr[11] << endl;
-        //cout << "p0.x " << setw(14) << setprecision(0) << fixed << tp0.x << endl;
-        //cout << "p0.y " << setw(14) << setprecision(0) << fixed << tp0.y << endl;
-        //cout << "p0.z " << setw(14) << setprecision(0) << fixed << tp0.z << endl;
+        ///cout << "Rt[0] "  << fixed << Rt_ptr[0] << endl;
+        ///cout << "Rt[1] "  << fixed << Rt_ptr[1] << endl;
+        ///cout << "Rt[2] "  << fixed << Rt_ptr[2] << endl;
+        ///cout << "Rt[3] "  << fixed << Rt_ptr[3] << endl;
+        ///cout << "Rt[4] "  << fixed << Rt_ptr[4] << endl;
+        ///cout << "Rt[5] "  << fixed << Rt_ptr[5] << endl;
+        ///cout << "Rt[6] "  << fixed << Rt_ptr[6] << endl;
+        ///cout << "Rt[7] "  << fixed << Rt_ptr[7] << endl;
+        ///cout << "Rt[8] "  << fixed << Rt_ptr[8] << endl;
+        ///cout << "Rt[9] "  << fixed << Rt_ptr[9] << endl;
+        ///cout << "Rt[10] " << fixed << Rt_ptr[10] << endl;
+        ///cout << "Rt[11] " << fixed << Rt_ptr[11] << endl;
+        ///cout << "p0.x " << setw(14) << setprecision(0) << fixed << tp0.x << endl;
+        ///cout << "p0.y " << setw(14) << setprecision(0) << fixed << tp0.y << endl;
+        ///cout << "p0.z " << setw(14) << setprecision(0) << fixed << tp0.z << endl;
+        ///if(iter==1)
+        ///    exit(1);
         //cout << "x:" << setw(4) << p2d_x << endl;
         //cout << "y:" << setw(4) << p2d_y << endl;
         //cout << "x:" << setw(4) << u1 - p2d_x << endl;
         //cout << "y:" << setw(4) << v1 - p2d_y << endl;
     }
-    //exit(1);
+    //if(iter==1)
+    //    exit(1);
 
     sigma_x = trunc_lsm_f2(std::sqrt(trunc_lsm_f2(sigma_x/correspsCount)));
     sigma_y = trunc_lsm_f2(std::sqrt(trunc_lsm_f2(sigma_y/correspsCount)));
@@ -1575,7 +1608,7 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                if(corresps_feature.rows >= feature_corr_num)
                {
                    Mat AtA_feature, AtB_feature;
-                   calcFeatureLsmMatrices(srcFrame->cloud, resultRt,
+                   calcFeatureLsmMatrices(iter, srcFrame->cloud, resultRt,
                                          corresps_feature, fx, fy, cx, cy,
                                          AtA_feature, AtB_feature, featureXEquationFuncPtr, featureYEquationFuncPtr, transformDim);
 
@@ -1584,6 +1617,10 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                }
             }
             //cout << "iter " << iter << endl;
+            //cout << "AtA " << AtA << endl;
+            //cout << "AtB " << AtB << endl;
+            //if(iter==1)
+            //    exit(1);
             bool solutionExist = solveSystem(AtA, AtB, determinantThreshold, ksi);
             if(!solutionExist)
                 break;
@@ -1592,38 +1629,329 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
             if(!testDelta)
                 break;
             //resultRt = currRt * resultRt;
-            resultRt.at<double>(0,0)=trunc1(currRt.at<double>(0,0)*resultRt.at<double>(0,0)/MUL)+trunc1(currRt.at<double>(0,1)*resultRt.at<double>(1,0)/MUL)+
-                                     trunc1(currRt.at<double>(0,2)*resultRt.at<double>(2,0)/MUL)+trunc1(currRt.at<double>(0,3)*resultRt.at<double>(3,0)/MUL); 
-            resultRt.at<double>(0,1)=trunc1(currRt.at<double>(0,0)*resultRt.at<double>(0,1)/MUL)+trunc1(currRt.at<double>(0,1)*resultRt.at<double>(1,1)/MUL)+
-                                     trunc1(currRt.at<double>(0,2)*resultRt.at<double>(2,1)/MUL)+trunc1(currRt.at<double>(0,3)*resultRt.at<double>(3,1)/MUL); 
-            resultRt.at<double>(0,2)=trunc1(currRt.at<double>(0,0)*resultRt.at<double>(0,2)/MUL)+trunc1(currRt.at<double>(0,1)*resultRt.at<double>(1,2)/MUL)+
-                                     trunc1(currRt.at<double>(0,2)*resultRt.at<double>(2,2)/MUL)+trunc1(currRt.at<double>(0,3)*resultRt.at<double>(3,2)/MUL); 
-            resultRt.at<double>(0,3)=trunc1(currRt.at<double>(0,0)*resultRt.at<double>(0,3)/MUL)+trunc1(currRt.at<double>(0,1)*resultRt.at<double>(1,3)/MUL)+
-                                     trunc1(currRt.at<double>(0,2)*resultRt.at<double>(2,3)/MUL)+trunc1(currRt.at<double>(0,3)*resultRt.at<double>(3,3)/MUL); 
-            resultRt.at<double>(1,0)=trunc1(currRt.at<double>(1,0)*resultRt.at<double>(0,0)/MUL)+trunc1(currRt.at<double>(1,1)*resultRt.at<double>(1,0)/MUL)+
-                                     trunc1(currRt.at<double>(1,2)*resultRt.at<double>(2,0)/MUL)+trunc1(currRt.at<double>(1,3)*resultRt.at<double>(3,0)/MUL); 
-            resultRt.at<double>(1,1)=trunc1(currRt.at<double>(1,0)*resultRt.at<double>(0,1)/MUL)+trunc1(currRt.at<double>(1,1)*resultRt.at<double>(1,1)/MUL)+
-                                     trunc1(currRt.at<double>(1,2)*resultRt.at<double>(2,1)/MUL)+trunc1(currRt.at<double>(1,3)*resultRt.at<double>(3,1)/MUL); 
-            resultRt.at<double>(1,2)=trunc1(currRt.at<double>(1,0)*resultRt.at<double>(0,2)/MUL)+trunc1(currRt.at<double>(1,1)*resultRt.at<double>(1,2)/MUL)+
-                                     trunc1(currRt.at<double>(1,2)*resultRt.at<double>(2,2)/MUL)+trunc1(currRt.at<double>(1,3)*resultRt.at<double>(3,2)/MUL); 
-            resultRt.at<double>(1,3)=trunc1(currRt.at<double>(1,0)*resultRt.at<double>(0,3)/MUL)+trunc1(currRt.at<double>(1,1)*resultRt.at<double>(1,3)/MUL)+
-                                     trunc1(currRt.at<double>(1,2)*resultRt.at<double>(2,3)/MUL)+trunc1(currRt.at<double>(1,3)*resultRt.at<double>(3,3)/MUL); 
-            resultRt.at<double>(2,0)=trunc1(currRt.at<double>(2,0)*resultRt.at<double>(0,0)/MUL)+trunc1(currRt.at<double>(2,1)*resultRt.at<double>(1,0)/MUL)+
-                                     trunc1(currRt.at<double>(2,2)*resultRt.at<double>(2,0)/MUL)+trunc1(currRt.at<double>(2,3)*resultRt.at<double>(3,0)/MUL); 
-            resultRt.at<double>(2,1)=trunc1(currRt.at<double>(2,0)*resultRt.at<double>(0,1)/MUL)+trunc1(currRt.at<double>(2,1)*resultRt.at<double>(1,1)/MUL)+
-                                     trunc1(currRt.at<double>(2,2)*resultRt.at<double>(2,1)/MUL)+trunc1(currRt.at<double>(2,3)*resultRt.at<double>(3,1)/MUL); 
-            resultRt.at<double>(2,2)=trunc1(currRt.at<double>(2,0)*resultRt.at<double>(0,2)/MUL)+trunc1(currRt.at<double>(2,1)*resultRt.at<double>(1,2)/MUL)+
-                                     trunc1(currRt.at<double>(2,2)*resultRt.at<double>(2,2)/MUL)+trunc1(currRt.at<double>(2,3)*resultRt.at<double>(3,2)/MUL); 
-            resultRt.at<double>(2,3)=trunc1(currRt.at<double>(2,0)*resultRt.at<double>(0,3)/MUL)+trunc1(currRt.at<double>(2,1)*resultRt.at<double>(1,3)/MUL)+
-                                     trunc1(currRt.at<double>(2,2)*resultRt.at<double>(2,3)/MUL)+trunc1(currRt.at<double>(2,3)*resultRt.at<double>(3,3)/MUL); 
-            resultRt.at<double>(3,0)=trunc1(currRt.at<double>(3,0)*resultRt.at<double>(0,0)/MUL)+trunc1(currRt.at<double>(3,1)*resultRt.at<double>(1,0)/MUL)+
-                                     trunc1(currRt.at<double>(3,2)*resultRt.at<double>(2,0)/MUL)+trunc1(currRt.at<double>(3,3)*resultRt.at<double>(3,0)/MUL); 
-            resultRt.at<double>(3,1)=trunc1(currRt.at<double>(3,0)*resultRt.at<double>(0,1)/MUL)+trunc1(currRt.at<double>(3,1)*resultRt.at<double>(1,1)/MUL)+
-                                     trunc1(currRt.at<double>(3,2)*resultRt.at<double>(2,1)/MUL)+trunc1(currRt.at<double>(3,3)*resultRt.at<double>(3,1)/MUL); 
-            resultRt.at<double>(3,2)=trunc1(currRt.at<double>(3,0)*resultRt.at<double>(0,2)/MUL)+trunc1(currRt.at<double>(3,1)*resultRt.at<double>(1,2)/MUL)+
-                                     trunc1(currRt.at<double>(3,2)*resultRt.at<double>(2,2)/MUL)+trunc1(currRt.at<double>(3,3)*resultRt.at<double>(3,2)/MUL); 
-            resultRt.at<double>(3,3)=trunc1(currRt.at<double>(3,0)*resultRt.at<double>(0,3)/MUL)+trunc1(currRt.at<double>(3,1)*resultRt.at<double>(1,3)/MUL)+
-                                     trunc1(currRt.at<double>(3,2)*resultRt.at<double>(2,3)/MUL)+trunc1(currRt.at<double>(3,3)*resultRt.at<double>(3,3)/MUL); 
+            Mat currRt_cp = currRt.clone();
+            //cout << "resultRt ori " << resultRt << endl;
+            //cout << "currRt " << currRt << endl;
+            mpz_t curr_00;
+            mpz_t curr_01;
+            mpz_t curr_02;
+            mpz_t curr_03;
+            mpz_t curr_10;
+            mpz_t curr_11;
+            mpz_t curr_12;
+            mpz_t curr_13;
+            mpz_t curr_20;
+            mpz_t curr_21;
+            mpz_t curr_22;
+            mpz_t curr_23;
+            mpz_t curr_30;
+            mpz_t curr_31;
+            mpz_t curr_32;
+            mpz_t curr_33;
+            mpz_t result_00;
+            mpz_t result_10;
+            mpz_t result_20;
+            mpz_t result_30;
+            mpz_t result_01;
+            mpz_t result_11;
+            mpz_t result_21;
+            mpz_t result_31;
+            mpz_t result_02;
+            mpz_t result_12;
+            mpz_t result_22;
+            mpz_t result_32;
+            mpz_t result_03;
+            mpz_t result_13;
+            mpz_t result_23;
+            mpz_t result_33;
+            mpz_t result_temp;
+            mpz_t result_final_00;
+            mpz_t result_final_01;
+            mpz_t result_final_02;
+            mpz_t result_final_03;
+            mpz_t result_final_10;
+            mpz_t result_final_11;
+            mpz_t result_final_12;
+            mpz_t result_final_13;
+            mpz_t result_final_20;
+            mpz_t result_final_21;
+            mpz_t result_final_22;
+            mpz_t result_final_23;
+            mpz_t result_final_30;
+            mpz_t result_final_31;
+            mpz_t result_final_32;
+            mpz_t result_final_33;
+            mpz_t MUL_gmp;
+            mpz_init_set_d(MUL_gmp, MUL);
+            mpz_init_set_d(curr_00, currRt_cp.at<double>(0,0));
+            mpz_init_set_d(curr_01, currRt_cp.at<double>(0,1));
+            mpz_init_set_d(curr_02, currRt_cp.at<double>(0,2));
+            mpz_init_set_d(curr_03, currRt_cp.at<double>(0,3));
+            mpz_init_set_d(curr_10, currRt_cp.at<double>(1,0));
+            mpz_init_set_d(curr_11, currRt_cp.at<double>(1,1));
+            mpz_init_set_d(curr_12, currRt_cp.at<double>(1,2));
+            mpz_init_set_d(curr_13, currRt_cp.at<double>(1,3));
+            mpz_init_set_d(curr_20, currRt_cp.at<double>(2,0));
+            mpz_init_set_d(curr_21, currRt_cp.at<double>(2,1));
+            mpz_init_set_d(curr_22, currRt_cp.at<double>(2,2));
+            mpz_init_set_d(curr_23, currRt_cp.at<double>(2,3));
+            mpz_init_set_d(curr_30, currRt_cp.at<double>(3,0));
+            mpz_init_set_d(curr_31, currRt_cp.at<double>(3,1));
+            mpz_init_set_d(curr_32, currRt_cp.at<double>(3,2));
+            mpz_init_set_d(curr_33, currRt_cp.at<double>(3,3));
+            mpz_init_set_d(result_00, resultRt.at<double>(0,0));
+            mpz_init_set_d(result_10, resultRt.at<double>(1,0));
+            mpz_init_set_d(result_20, resultRt.at<double>(2,0));
+            mpz_init_set_d(result_30, resultRt.at<double>(3,0));
+            mpz_init_set_d(result_01, resultRt.at<double>(0,1));
+            mpz_init_set_d(result_11, resultRt.at<double>(1,1));
+            mpz_init_set_d(result_21, resultRt.at<double>(2,1));
+            mpz_init_set_d(result_31, resultRt.at<double>(3,1));
+            mpz_init_set_d(result_02, resultRt.at<double>(0,2));
+            mpz_init_set_d(result_12, resultRt.at<double>(1,2));
+            mpz_init_set_d(result_22, resultRt.at<double>(2,2));
+            mpz_init_set_d(result_32, resultRt.at<double>(3,2));
+            mpz_init_set_d(result_03, resultRt.at<double>(0,3));
+            mpz_init_set_d(result_13, resultRt.at<double>(1,3));
+            mpz_init_set_d(result_23, resultRt.at<double>(2,3));
+            mpz_init_set_d(result_33, resultRt.at<double>(3,3));
+            mpz_mul(result_temp,curr_00,result_00);
+            mpz_div(result_final_00,result_temp,MUL_gmp);
+            mpz_mul(result_temp,curr_01,result_10);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_00,result_final_00,result_temp);
+            mpz_mul(result_temp,curr_02,result_20);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_00,result_final_00,result_temp);
+            mpz_mul(result_temp,curr_03,result_30);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_00,result_final_00,result_temp);
+            resultRt.at<double>(0,0) = mpz_get_d(result_final_00);
+            mpz_mul(result_temp,curr_00,result_01);
+            mpz_div(result_final_01,result_temp,MUL_gmp);
+            mpz_mul(result_temp,curr_01,result_11);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_01,result_final_01,result_temp);
+            mpz_mul(result_temp,curr_02,result_21);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_01,result_final_01,result_temp);
+            mpz_mul(result_temp,curr_03,result_31);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_01,result_final_01,result_temp);
+            resultRt.at<double>(0,1) = mpz_get_d(result_final_01);
+            mpz_mul(result_temp,curr_00,result_02);
+            mpz_div(result_final_02,result_temp,MUL_gmp);
+            mpz_mul(result_temp,curr_01,result_12);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_02,result_final_02,result_temp);
+            mpz_mul(result_temp,curr_02,result_22);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_02,result_final_02,result_temp);
+            mpz_mul(result_temp,curr_03,result_32);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_02,result_final_02,result_temp);
+            resultRt.at<double>(0,2) = mpz_get_d(result_final_02);
+            mpz_mul(result_temp,curr_00,result_03);
+            mpz_div(result_final_03,result_temp,MUL_gmp);
+            mpz_mul(result_temp,curr_01,result_13);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_03,result_final_03,result_temp);
+            mpz_mul(result_temp,curr_02,result_23);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_03,result_final_03,result_temp);
+            mpz_mul(result_temp,curr_03,result_33);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_03,result_final_03,result_temp);
+            resultRt.at<double>(0,3) = mpz_get_d(result_final_03);
+            mpz_mul(result_temp,curr_10,result_00);
+            mpz_div(result_final_10,result_temp,MUL_gmp);
+            mpz_mul(result_temp,curr_11,result_10);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_10,result_final_10,result_temp);
+            mpz_mul(result_temp,curr_12,result_20);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_10,result_final_10,result_temp);
+            mpz_mul(result_temp,curr_13,result_30);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_10,result_final_10,result_temp);
+            resultRt.at<double>(1,0) = mpz_get_d(result_final_10);
+            mpz_mul(result_temp,curr_10,result_01);
+            mpz_div(result_final_11,result_temp,MUL_gmp);
+            mpz_mul(result_temp,curr_11,result_11);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_11,result_final_11,result_temp);
+            mpz_mul(result_temp,curr_12,result_21);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_11,result_final_11,result_temp);
+            mpz_mul(result_temp,curr_13,result_31);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_11,result_final_11,result_temp);
+            resultRt.at<double>(1,1) = mpz_get_d(result_final_11);
+            mpz_mul(result_temp,curr_10,result_02);
+            mpz_div(result_final_12,result_temp,MUL_gmp);
+            mpz_mul(result_temp,curr_11,result_12);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_12,result_final_12,result_temp);
+            mpz_mul(result_temp,curr_12,result_22);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_12,result_final_12,result_temp);
+            mpz_mul(result_temp,curr_13,result_32);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_12,result_final_12,result_temp);
+            resultRt.at<double>(1,2) = mpz_get_d(result_final_12);
+            mpz_mul(result_temp,curr_10,result_03);
+            mpz_div(result_final_13,result_temp,MUL_gmp);
+            mpz_mul(result_temp,curr_11,result_13);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_13,result_final_13,result_temp);
+            mpz_mul(result_temp,curr_12,result_23);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_13,result_final_13,result_temp);
+            mpz_mul(result_temp,curr_13,result_33);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_13,result_final_13,result_temp);
+            resultRt.at<double>(1,3) = mpz_get_d(result_final_13);
+            mpz_mul(result_temp,curr_20,result_00);
+            mpz_div(result_final_20,result_temp,MUL_gmp);
+            mpz_mul(result_temp,curr_21,result_10);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_20,result_final_20,result_temp);
+            mpz_mul(result_temp,curr_22,result_20);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_20,result_final_20,result_temp);
+            mpz_mul(result_temp,curr_23,result_30);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_20,result_final_20,result_temp);
+            resultRt.at<double>(2,0) = mpz_get_d(result_final_20);
+            mpz_mul(result_temp,curr_20,result_01);
+            mpz_div(result_final_21,result_temp,MUL_gmp);
+            mpz_mul(result_temp,curr_21,result_11);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_21,result_final_21,result_temp);
+            mpz_mul(result_temp,curr_22,result_21);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_21,result_final_21,result_temp);
+            mpz_mul(result_temp,curr_23,result_31);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_21,result_final_21,result_temp);
+            resultRt.at<double>(2,1) = mpz_get_d(result_final_21);
+            mpz_mul(result_temp,curr_20,result_02);
+            mpz_div(result_final_22,result_temp,MUL_gmp);
+            mpz_mul(result_temp,curr_21,result_12);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_22,result_final_22,result_temp);
+            mpz_mul(result_temp,curr_22,result_22);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_22,result_final_22,result_temp);
+            mpz_mul(result_temp,curr_23,result_32);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_22,result_final_22,result_temp);
+            resultRt.at<double>(2,2) = mpz_get_d(result_final_22);
+            mpz_mul(result_temp,curr_20,result_03);
+            mpz_div(result_final_23,result_temp,MUL_gmp);
+            mpz_mul(result_temp,curr_21,result_13);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_23,result_final_23,result_temp);
+            mpz_mul(result_temp,curr_22,result_23);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_23,result_final_23,result_temp);
+            mpz_mul(result_temp,curr_23,result_33);
+            mpz_div(result_temp,result_temp,MUL_gmp);
+            mpz_add(result_final_23,result_final_23,result_temp);
+            resultRt.at<double>(2,3) = mpz_get_d(result_final_23);
+            ////mpz_mul(result_temp,curr_30,result_00);
+            ////mpz_div(result_final_30,result_temp,MUL_gmp);
+            ////mpz_mul(result_temp,curr_31,result_10);
+            ////mpz_div(result_temp,result_temp,MUL_gmp);
+            ////mpz_add(result_final_30,result_final_30,result_temp);
+            ////mpz_mul(result_temp,curr_32,result_20);
+            ////mpz_div(result_temp,result_temp,MUL_gmp);
+            ////mpz_add(result_final_30,result_final_30,result_temp);
+            ////mpz_mul(result_temp,curr_33,result_30);
+            ////mpz_div(result_temp,result_temp,MUL_gmp);
+            ////mpz_add(result_final_30,result_final_30,result_temp);
+            ////resultRt.at<double>(3,0) = mpz_get_d(result_final_30);
+            ////cout << "test " << endl;
+            ////mpz_mul(result_temp,curr_30,result_01);
+            ////mpz_div(result_final_31,result_temp,MUL_gmp);
+            ////mpz_mul(result_temp,curr_31,result_11);
+            ////mpz_div(result_temp,result_temp,MUL_gmp);
+            ////mpz_add(result_final_31,result_final_31,result_temp);
+            ////mpz_mul(result_temp,curr_32,result_21);
+            ////mpz_div(result_temp,result_temp,MUL_gmp);
+            ////mpz_add(result_final_31,result_final_31,result_temp);
+            ////mpz_mul(result_temp,curr_33,result_31);
+            ////mpz_div(result_temp,result_temp,MUL_gmp);
+            ////mpz_add(result_final_31,result_final_31,result_temp);
+            ////resultRt.at<double>(3,1) = mpz_get_d(result_final_31);
+            ////cout << "test1 " << endl;
+            ////mpz_mul(result_temp,curr_30,result_02);
+            ////mpz_div(result_final_32,result_temp,MUL_gmp);
+            ////mpz_mul(result_temp,curr_31,result_12);
+            ////mpz_div(result_temp,result_temp,MUL_gmp);
+            ////mpz_add(result_final_32,result_final_32,result_temp);
+            ////mpz_mul(result_temp,curr_32,result_22);
+            ////mpz_div(result_temp,result_temp,MUL_gmp);
+            ////mpz_add(result_final_32,result_final_32,result_temp);
+            ////mpz_mul(result_temp,curr_33,result_32);
+            ////mpz_div(result_temp,result_temp,MUL_gmp);
+            ////mpz_add(result_final_32,result_final_32,result_temp);
+            ////resultRt.at<double>(3,2) = mpz_get_d(result_final_32);
+            ////cout << "test1 " << endl;
+            ////mpz_mul(result_temp,curr_30,result_03);
+            ////cout << "test1 " << endl;
+            ////mpz_div(result_final_33,result_temp,MUL_gmp);
+            ////cout << "test1 " << endl;
+            ////mpz_mul(result_temp,curr_31,result_13);
+            ////cout << "test1 " << endl;
+            ////mpz_div(result_temp,result_temp,MUL_gmp);
+            ////cout << "test1 " << endl;
+            ////mpz_add(result_final_33,result_final_33,result_temp);
+            ////cout << "test1 " << endl;
+            ////mpz_mul(result_temp,curr_32,result_23);
+            ////mpz_div(result_temp,result_temp,MUL_gmp);
+            ////mpz_add(result_final_33,result_final_33,result_temp);
+            ////mpz_mul(result_temp,curr_33,result_33);
+            ////cout << "test1 " << endl;
+            ////mpz_div(result_temp,result_temp,MUL_gmp);
+            ////mpz_add(result_final_33,result_final_33,result_temp);
+            ////resultRt.at<double>(3,3) = mpz_get_d(result_final_33);
+            ////cout << "test " << endl;
+            //resultRt.at<double>(0,0)=trunc1(currRt.at<double>(0,0)*resultRt.at<double>(0,0)/MUL)+trunc1(currRt.at<double>(0,1)*resultRt.at<double>(1,0)/MUL)+
+            //                         trunc1(currRt.at<double>(0,2)*resultRt.at<double>(2,0)/MUL)+trunc1(currRt.at<double>(0,3)*resultRt.at<double>(3,0)/MUL); 
+            //resultRt.at<double>(0,1)=trunc1(currRt.at<double>(0,0)*resultRt.at<double>(0,1)/MUL)+trunc1(currRt.at<double>(0,1)*resultRt.at<double>(1,1)/MUL)+
+            //                         trunc1(currRt.at<double>(0,2)*resultRt.at<double>(2,1)/MUL)+trunc1(currRt.at<double>(0,3)*resultRt.at<double>(3,1)/MUL); 
+            //resultRt.at<double>(0,2)=trunc1(currRt.at<double>(0,0)*resultRt.at<double>(0,2)/MUL)+trunc1(currRt.at<double>(0,1)*resultRt.at<double>(1,2)/MUL)+
+            //                         trunc1(currRt.at<double>(0,2)*resultRt.at<double>(2,2)/MUL)+trunc1(currRt.at<double>(0,3)*resultRt.at<double>(3,2)/MUL); 
+            //resultRt.at<double>(0,3)=trunc1(currRt.at<double>(0,0)*resultRt.at<double>(0,3)/MUL)+trunc1(currRt.at<double>(0,1)*resultRt.at<double>(1,3)/MUL)+
+            //                         trunc1(currRt.at<double>(0,2)*resultRt.at<double>(2,3)/MUL)+trunc1(currRt.at<double>(0,3)*resultRt.at<double>(3,3)/MUL); 
+            //resultRt.at<double>(1,0)=trunc1(currRt.at<double>(1,0)*resultRt.at<double>(0,0)/MUL)+trunc1(currRt.at<double>(1,1)*resultRt.at<double>(1,0)/MUL)+
+            //                         trunc1(currRt.at<double>(1,2)*resultRt.at<double>(2,0)/MUL)+trunc1(currRt.at<double>(1,3)*resultRt.at<double>(3,0)/MUL); 
+            //resultRt.at<double>(1,1)=trunc1(currRt.at<double>(1,0)*resultRt.at<double>(0,1)/MUL)+trunc1(currRt.at<double>(1,1)*resultRt.at<double>(1,1)/MUL)+
+            //                         trunc1(currRt.at<double>(1,2)*resultRt.at<double>(2,1)/MUL)+trunc1(currRt.at<double>(1,3)*resultRt.at<double>(3,1)/MUL); 
+            //resultRt.at<double>(1,2)=trunc1(currRt.at<double>(1,0)*resultRt.at<double>(0,2)/MUL)+trunc1(currRt.at<double>(1,1)*resultRt.at<double>(1,2)/MUL)+
+            //                         trunc1(currRt.at<double>(1,2)*resultRt.at<double>(2,2)/MUL)+trunc1(currRt.at<double>(1,3)*resultRt.at<double>(3,2)/MUL); 
+            //resultRt.at<double>(1,3)=trunc1(currRt.at<double>(1,0)*resultRt.at<double>(0,3)/MUL)+trunc1(currRt.at<double>(1,1)*resultRt.at<double>(1,3)/MUL)+
+            //                         trunc1(currRt.at<double>(1,2)*resultRt.at<double>(2,3)/MUL)+trunc1(currRt.at<double>(1,3)*resultRt.at<double>(3,3)/MUL); 
+            //resultRt.at<double>(2,0)=trunc1(currRt.at<double>(2,0)*resultRt.at<double>(0,0)/MUL)+trunc1(currRt.at<double>(2,1)*resultRt.at<double>(1,0)/MUL)+
+            //                         trunc1(currRt.at<double>(2,2)*resultRt.at<double>(2,0)/MUL)+trunc1(currRt.at<double>(2,3)*resultRt.at<double>(3,0)/MUL); 
+            //resultRt.at<double>(2,1)=trunc1(currRt.at<double>(2,0)*resultRt.at<double>(0,1)/MUL)+trunc1(currRt.at<double>(2,1)*resultRt.at<double>(1,1)/MUL)+
+            //                         trunc1(currRt.at<double>(2,2)*resultRt.at<double>(2,1)/MUL)+trunc1(currRt.at<double>(2,3)*resultRt.at<double>(3,1)/MUL); 
+            //resultRt.at<double>(2,2)=trunc1(currRt.at<double>(2,0)*resultRt.at<double>(0,2)/MUL)+trunc1(currRt.at<double>(2,1)*resultRt.at<double>(1,2)/MUL)+
+            //                         trunc1(currRt.at<double>(2,2)*resultRt.at<double>(2,2)/MUL)+trunc1(currRt.at<double>(2,3)*resultRt.at<double>(3,2)/MUL); 
+            //resultRt.at<double>(2,3)=trunc1(currRt.at<double>(2,0)*resultRt.at<double>(0,3)/MUL)+trunc1(currRt.at<double>(2,1)*resultRt.at<double>(1,3)/MUL)+
+            //                         trunc1(currRt.at<double>(2,2)*resultRt.at<double>(2,3)/MUL)+trunc1(currRt.at<double>(2,3)*resultRt.at<double>(3,3)/MUL); 
+            //resultRt.at<double>(3,0)=trunc1(currRt.at<double>(3,0)*resultRt.at<double>(0,0)/MUL)+trunc1(currRt.at<double>(3,1)*resultRt.at<double>(1,0)/MUL)+
+            //                         trunc1(currRt.at<double>(3,2)*resultRt.at<double>(2,0)/MUL)+trunc1(currRt.at<double>(3,3)*resultRt.at<double>(3,0)/MUL); 
+            //resultRt.at<double>(3,1)=trunc1(currRt.at<double>(3,0)*resultRt.at<double>(0,1)/MUL)+trunc1(currRt.at<double>(3,1)*resultRt.at<double>(1,1)/MUL)+
+            //                         trunc1(currRt.at<double>(3,2)*resultRt.at<double>(2,1)/MUL)+trunc1(currRt.at<double>(3,3)*resultRt.at<double>(3,1)/MUL); 
+            //resultRt.at<double>(3,2)=trunc1(currRt.at<double>(3,0)*resultRt.at<double>(0,2)/MUL)+trunc1(currRt.at<double>(3,1)*resultRt.at<double>(1,2)/MUL)+
+            //                         trunc1(currRt.at<double>(3,2)*resultRt.at<double>(2,2)/MUL)+trunc1(currRt.at<double>(3,3)*resultRt.at<double>(3,2)/MUL); 
+            //resultRt.at<double>(3,3)=trunc1(currRt.at<double>(3,0)*resultRt.at<double>(0,3)/MUL)+trunc1(currRt.at<double>(3,1)*resultRt.at<double>(1,3)/MUL)+
+            //                         trunc1(currRt.at<double>(3,2)*resultRt.at<double>(2,3)/MUL)+trunc1(currRt.at<double>(3,3)*resultRt.at<double>(3,3)/MUL); 
+            //cout << "resultRt " << resultRt << endl;
+            //if(iter==1)
+            //exit(1);
             isOk = true;
         }
         //exit(1);
