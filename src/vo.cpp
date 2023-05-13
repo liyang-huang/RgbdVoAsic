@@ -218,7 +218,10 @@ void setDefaultIterCounts(Mat& iterCounts)
         //iterCounts = Mat(Vec4i(7,7,7,7));
         iterCounts = Mat(Vec4i(7,7,7,7));
     else
-        iterCounts = Mat(Vec4i(7));
+        //iterCounts = Mat(Vec4i(7));
+        iterCounts = Mat(Vec4i(8));
+        //iterCounts = Mat(Vec4i(10));
+        //iterCounts = Mat(Vec4i(15));
         //iterCounts = Mat(Vec4i(3));
 }
 
@@ -1549,6 +1552,22 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
 
                #else
                // ============ Use Frank's ORB to do feature matching ============
+               ////#define FAST_N                          9
+               ////#define FAST_threshold                  20
+               ////#define FAST_orientation_patch_size     7
+               ////#define FAST_scorethreshold             80
+               ////#define FAST_edgethreshold              31
+               ////#define keypoints_num                   500
+               ////#define MATCH_threshold                 30
+               ////#define DISPLAY                         false
+               ////#define FIXED                           false
+               ////#define TESTBENCH                       false
+               ////// Image pyramid
+               ////#define FAST_nlevels                    4
+               ////#define FAST_scaling                    2
+               ////
+               ////// cout << srcFrame->image.rows << " " << srcFrame->image.cols << endl;
+               ////MYORB orb(FAST_N, FAST_threshold, FAST_orientation_patch_size, FAST_scorethreshold, FAST_edgethreshold, keypoints_num, MATCH_threshold, FAST_nlevels, FAST_scaling, srcFrame->image, dstFrame->image, DISPLAY, FIXED, TESTBENCH);
                #define FAST_N                          9
                #define FAST_threshold                  20
                #define FAST_orientation_patch_size     7
@@ -1557,25 +1576,10 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
                #define keypoints_num                   500
                #define MATCH_threshold                 30
                #define DISPLAY                         false
-               #define FIXED                           false
+               #define FIXED                           true
+               #define DEBUG                           false
                #define TESTBENCH                       false
-               // Image pyramid
-               #define FAST_nlevels                    4
-               #define FAST_scaling                    2
-               
-               // cout << srcFrame->image.rows << " " << srcFrame->image.cols << endl;
-               MYORB orb(FAST_N, FAST_threshold, FAST_orientation_patch_size, FAST_scorethreshold, FAST_edgethreshold, keypoints_num, MATCH_threshold, FAST_nlevels, FAST_scaling, srcFrame->image, dstFrame->image, DISPLAY, FIXED, TESTBENCH);
-               //#define FAST_N                          9
-               //#define FAST_threshold                  20
-               //#define FAST_orientation_patch_size     7
-               //#define FAST_scorethreshold             80
-               //#define FAST_edgethreshold              31
-               //#define keypoints_num                   500
-               //#define MATCH_threshold                 30
-               //#define DISPLAY                         false
-               //#define FIXED                           false
-               //#define DEBUG                           false
-               //MYORB orb(FAST_N, FAST_threshold, FAST_orientation_patch_size, FAST_scorethreshold, FAST_edgethreshold, keypoints_num, MATCH_threshold, srcFrame->image, dstFrame->image, srcFrame->depth, dstFrame->depth, DISPLAY, FIXED, DEBUG);
+               MYORB orb(FAST_N, FAST_threshold, FAST_orientation_patch_size, FAST_scorethreshold, FAST_edgethreshold, keypoints_num, MATCH_threshold, srcFrame->image, dstFrame->image, srcFrame->depth, dstFrame->depth, DISPLAY, FIXED, DEBUG, TESTBENCH);
                std::vector<DMatch> matches = orb.Matching();
 
                // Delete matches without depth information
