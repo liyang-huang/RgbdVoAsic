@@ -914,7 +914,7 @@ void calcFeatureLsmMatrices(const int iter, const Mat& cloud0, const Mat& Rt,
         //cout << "u1 " << u1 << endl;
         //cout << "v1 " << v1 << endl;
         //int z0 = trunc_lsm_f1(p0.z/MUL);
-        //cout << "z0 " << z0 << endl;
+        //cout << "z0 " << hex << z0 << endl;
         ///cout << "Rt[0] "  << fixed << Rt_ptr[0] << endl;
         ///cout << "Rt[1] "  << fixed << Rt_ptr[1] << endl;
         ///cout << "Rt[2] "  << fixed << Rt_ptr[2] << endl;
@@ -938,7 +938,7 @@ void calcFeatureLsmMatrices(const int iter, const Mat& cloud0, const Mat& Rt,
         //cout << "y:" << setw(4) << v1 - p2d_y << endl;
     }
     //if(iter==1)
-    //    exit(1);
+    //  exit(1);
 
     sigma_x = trunc_lsm_f2(std::sqrt(trunc_lsm_f2(sigma_x/correspsCount)));
     sigma_y = trunc_lsm_f2(std::sqrt(trunc_lsm_f2(sigma_y/correspsCount)));
@@ -1000,15 +1000,21 @@ void calcFeatureLsmMatrices(const int iter, const Mat& cloud0, const Mat& Rt,
                 mpz_add(A_ptr_x_x,A_ptr_x_x,A_ptr_y_y);
                 mpz_add(AtA_gmp,AtA_gmp,A_ptr_x_x);
                 AtA_ptr[x] = mpz_get_d(AtA_gmp);
+                mpz_clear(A_ptr_x_x);
+                mpz_clear(A_ptr_x_y);
+                mpz_clear(A_ptr_y_x);
+                mpz_clear(A_ptr_y_y);
+                mpz_clear(MUL_gmp);
+                mpz_clear(AtA_gmp);
             } 
             //AtB_ptr[y] += trunc1(A_ptr_x[y] * w_x * w_x * diffs_x_ptr[correspIndex]) + trunc1(A_ptr_y[y] * w_y * w_y * diffs_y_ptr[correspIndex]);
             //HW friendly
             //AtB_ptr[y] += trunc_lsm_f5(trunc_lsm_f4(A_ptr_x[y] * diffs_x_ptr[correspIndex]) + trunc_lsm_f4(A_ptr_y[y] * diffs_y_ptr[correspIndex]));
-            mpz_t A_ptr_x_gmp;
-            mpz_t A_ptr_y_gmp;
-            mpz_t diffs_x_gmp;
-            mpz_t diffs_y_gmp;
-            mpz_t AtB_gmp;
+             mpz_t A_ptr_x_gmp;
+             mpz_t A_ptr_y_gmp;
+             mpz_t diffs_x_gmp;
+             mpz_t diffs_y_gmp;
+             mpz_t AtB_gmp;
             mpz_init_set_d(A_ptr_x_gmp, A_ptr_x[y]);
             mpz_init_set_d(A_ptr_y_gmp, A_ptr_y[y]);
             mpz_init_set_d(diffs_x_gmp, diffs_x_ptr[correspIndex]);
@@ -1019,6 +1025,11 @@ void calcFeatureLsmMatrices(const int iter, const Mat& cloud0, const Mat& Rt,
             mpz_init_set_d(AtB_gmp, AtB_ptr[y]);
             mpz_add(AtB_gmp, AtB_gmp, diffs_x_gmp);
             AtB_ptr[y] = mpz_get_d(AtB_gmp);
+            mpz_clear(A_ptr_x_gmp);
+            mpz_clear(A_ptr_y_gmp);
+            mpz_clear(diffs_x_gmp);
+            mpz_clear(diffs_y_gmp);
+            mpz_clear(AtB_gmp);
         }
         //cout << "idx " << correspIndex << endl;
         //cout << "Ax[0] " << setw(13) << setprecision(0) << fixed << A_ptr_x[0] << endl;
@@ -1863,6 +1874,56 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
             mpz_div(result_temp,result_temp,MUL_gmp);
             mpz_add(result_final_23,result_final_23,result_temp);
             resultRt.at<double>(2,3) = mpz_get_d(result_final_23);
+            //mpz_clear(curr_00);
+            //mpz_clear(curr_01);
+            //mpz_clear(curr_02);
+            //mpz_clear(curr_03);
+            //mpz_clear(curr_10);
+            //mpz_clear(curr_11);
+            //mpz_clear(curr_12);
+            //mpz_clear(curr_13);
+            //mpz_clear(curr_20);
+            //mpz_clear(curr_21);
+            //mpz_clear(curr_22);
+            //mpz_clear(curr_23);
+            //mpz_clear(curr_30);
+            //mpz_clear(curr_31);
+            //mpz_clear(curr_32);
+            //mpz_clear(curr_33);
+            //mpz_clear(result_00);
+            //mpz_clear(result_10);
+            //mpz_clear(result_20);
+            //mpz_clear(result_30);
+            //mpz_clear(result_01);
+            //mpz_clear(result_11);
+            //mpz_clear(result_21);
+            //mpz_clear(result_31);
+            //mpz_clear(result_02);
+            //mpz_clear(result_12);
+            //mpz_clear(result_22);
+            //mpz_clear(result_32);
+            //mpz_clear(result_03);
+            //mpz_clear(result_13);
+            //mpz_clear(result_23);
+            //mpz_clear(result_33);
+            //mpz_clear(result_temp);
+            //mpz_clear(result_final_00);
+            //mpz_clear(result_final_01);
+            //mpz_clear(result_final_02);
+            //mpz_clear(result_final_03);
+            //mpz_clear(result_final_10);
+            //mpz_clear(result_final_11);
+            //mpz_clear(result_final_12);
+            //mpz_clear(result_final_13);
+            //mpz_clear(result_final_20);
+            //mpz_clear(result_final_21);
+            //mpz_clear(result_final_22);
+            //mpz_clear(result_final_23);
+            //mpz_clear(result_final_30);
+            //mpz_clear(result_final_31);
+            //mpz_clear(result_final_32);
+            //mpz_clear(result_final_33);
+            //mpz_clear(MUL_gmp);
             ////mpz_mul(result_temp,curr_30,result_00);
             ////mpz_div(result_final_30,result_temp,MUL_gmp);
             ////mpz_mul(result_temp,curr_31,result_10);
@@ -1955,7 +2016,7 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
             //                         trunc1(currRt.at<double>(3,2)*resultRt.at<double>(2,3)/MUL)+trunc1(currRt.at<double>(3,3)*resultRt.at<double>(3,3)/MUL); 
             //cout << "resultRt " << resultRt << endl;
             //if(iter==1)
-            //exit(1);
+            //  exit(1);
             isOk = true;
         }
         //exit(1);
