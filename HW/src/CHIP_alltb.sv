@@ -44,11 +44,11 @@ module CHIP_tb;
     logic clk, rst_n;
     logic clk_ref;
 
-    logic [9:0] u0_in [0:280];
-    logic [9:0] v0_in [0:280];
-    logic [9:0] u1_in [0:280];
-    logic [9:0] v1_in [0:280];
-    logic [15:0] z0_in [0:280];
+    logic [9:0] u0_in [0:113];
+    logic [9:0] v0_in [0:113];
+    logic [9:0] u1_in [0:113];
+    logic [9:0] v1_in [0:113];
+    logic [15:0] z0_in [0:113];
     logic [9:0] u0_i;
     logic [9:0] v0_i;
     logic [9:0] u1_i;
@@ -147,7 +147,7 @@ module CHIP_tb;
            i <= 0; 
         end
         if(tx_en) begin
-            if(i < 281) begin
+            if(i < 114) begin
                 u0_i <= u0_in[i];
                 v0_i <= v0_in[i];
                 u1_i <= u1_in[i];
@@ -180,18 +180,18 @@ module CHIP_tb;
     //assign initial_pose[9]  = 42'd0;
     //assign initial_pose[10] = 42'd16777216;
     //assign initial_pose[11] = 42'd0;
-    assign initial_pose[0] = 42'sd16777012;
-    assign initial_pose[1] = -42'sd70417;
-    assign initial_pose[2] = 42'sd43303;
-    assign initial_pose[3] = 42'sd293953671;
-    assign initial_pose[4] = 42'sd69469;
-    assign initial_pose[5] = 42'sd16773180;
-    assign initial_pose[6] = 42'sd361290;
-    assign initial_pose[7] = 42'sd562249495;
-    assign initial_pose[8] = -42'sd44809;
-    assign initial_pose[9] = -42'sd361108;
-    assign initial_pose[10] = 42'sd16773268;
-    assign initial_pose[11] = -42'sd255191270;
+    assign initial_pose[0] = 42'sd16777001;
+    assign initial_pose[1] = -42'sd69812;
+    assign initial_pose[2] = 42'sd48217;
+    assign initial_pose[3] = 42'sd318084634;
+    assign initial_pose[4] = 42'sd68808;
+    assign initial_pose[5] = 42'sd16773537;
+    assign initial_pose[6] = 42'sd344465;
+    assign initial_pose[7] = 42'sd628608084;
+    assign initial_pose[8] = -42'sd49639;
+    assign initial_pose[9] = -42'sd344263;
+    assign initial_pose[10] = 42'sd16773609;
+    assign initial_pose[11] = -42'sd381085875;
 
     assign r_fx = 35'd8678853836;
     assign r_fy = 35'd8665432064;
