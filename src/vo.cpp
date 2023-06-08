@@ -539,6 +539,7 @@ int computeCorresps_hw(const Mat& K, const Mat& K_inv, const Mat& Rt,
                         double d0 = depth0.at<double>(v0,u0);
                         if(validMask0.at<uchar>(v0, u0) && std::abs(tp1_z - trunc1(d0*MUL)) <= trunc1(maxDepthDiff*MUL) && std::abs(v1 - v0) <= maxLineDiff)
                         {
+                            /*
                             Vec2s& c = corresps.at<Vec2s>(v0,u0);
                             if(c[0] != -1)
                             {
@@ -555,14 +556,17 @@ int computeCorresps_hw(const Mat& K, const Mat& K_inv, const Mat& Rt,
                                 correspCount++;
 
                             c = Vec2s((short)u1, (short)v1);
-                            
+                            */
+                            Vec2s& c = corresps.at<Vec2s>(v1,u1);
+                            c = Vec2s((short)u0, (short)v0);
+                            correspCount++;
                         }
                     }
                 }
             }
         }
     }
-
+    /*
     int v_max_corr = 0;
     _corresps.create(correspCount, 1, CV_32SC4);
     Vec4i * corresps_ptr = _corresps.ptr<Vec4i>();
@@ -576,6 +580,26 @@ int computeCorresps_hw(const Mat& K, const Mat& K_inv, const Mat& Rt,
             {
                 //corresps_ptr[i++] = Vec4i(u0,v0,c[0],c[1]);
                 corresps_ptr[i++] = Vec4i(c[0],c[1],u0,v0);
+                int v_diff = abs(v0-c[1]);
+                if(v_diff > v_max_corr)
+                    v_max_corr = v_diff;
+            }
+        }
+    }
+    */
+    int v_max_corr = 0;
+    _corresps.create(correspCount, 1, CV_32SC4);
+    Vec4i * corresps_ptr = _corresps.ptr<Vec4i>();
+    for(int v0 = 0, i = 0; v0 < corresps.rows; v0++)
+    {
+        const Vec2s* corresps_row = corresps.ptr<Vec2s>(v0);
+        for(int u0 = 0; u0 < corresps.cols; u0++)
+        {
+            const Vec2s& c = corresps_row[u0];
+            if(c[0] != -1)
+            {
+                corresps_ptr[i++] = Vec4i(u0,v0,c[0],c[1]);
+                //corresps_ptr[i++] = Vec4i(c[0],c[1],u0,v0);
                 int v_diff = abs(v0-c[1]);
                 if(v_diff > v_max_corr)
                     v_max_corr = v_diff;
