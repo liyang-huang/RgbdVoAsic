@@ -497,6 +497,95 @@ void checkNormals(const Mat& normals, const Size& depthSize)
 }
 
 static
+int computeCorresps_hw(const Mat& K, const Mat& K_inv, const Mat& Rt,
+                     const Mat& depth0, const Mat& validMask0,
+                     const Mat& depth1, const Mat& selectMask1, double maxDepthDiff,
+                     Mat& _corresps)
+{
+    const double fx = K.at<double>(0,0);
+    const double fy = K.at<double>(1,1);
+    const double ox = K.at<double>(0,2);
+    const double oy = K.at<double>(1,2);
+    const double * Rt_ptr = Rt.ptr<const double>();
+    Mat corresps(depth1.size(), CV_16SC2, Scalar::all(-1));
+    Rect r(0, 0, depth1.cols, depth1.rows);
+
+    //cout << selectMask1 << endl;
+    int correspCount = 0;
+    for(int v1 = 0; v1 < depth1.rows; v1++)
+    {
+        const double *depth1_row = depth1.ptr<double>(v1);
+        const uchar *mask1_row = selectMask1.ptr<uchar>(v1);
+        for(int u1 = 0; u1 < depth1.cols; u1++)
+        {
+            double d1 = depth1_row[u1];
+            if(mask1_row[u1])
+            {
+                double p1_x = trunc_3d(trunc_3d(trunc_3d(u1*MUL - trunc_3d(ox*MUL)) * d1 / trunc_3d(fx*MUL)) * MUL);
+                double p1_y = trunc_3d(trunc_3d(trunc_3d(v1*MUL - trunc_3d(oy*MUL)) * d1 / trunc_3d(fy*MUL)) * MUL);
+                double p1_z = trunc_3d(d1 * MUL);
+                double tp1_x = trunc_lsm_f1(p1_x * Rt_ptr[0] / MUL) + trunc_lsm_f1(p1_y * Rt_ptr[1] / MUL) + trunc_lsm_f1(p1_z * Rt_ptr[2]  / MUL) + Rt_ptr[3] ;
+                double tp1_y = trunc_lsm_f1(p1_x * Rt_ptr[4] / MUL) + trunc_lsm_f1(p1_y * Rt_ptr[5] / MUL) + trunc_lsm_f1(p1_z * Rt_ptr[6]  / MUL) + Rt_ptr[7] ;
+                double tp1_z = trunc_lsm_f1(p1_x * Rt_ptr[8] / MUL) + trunc_lsm_f1(p1_y * Rt_ptr[9] / MUL) + trunc_lsm_f1(p1_z * Rt_ptr[10] / MUL) + Rt_ptr[11];
+                if(tp1_z>0)
+                    {
+                    int u0 = trunc_lsm_f2( (trunc_lsm_f2(trunc_lsm_f2(fx * MUL) * tp1_x / tp1_z) + trunc_lsm_f2(ox * MUL)) / MUL);
+                    int v0 = trunc_lsm_f2( (trunc_lsm_f2(trunc_lsm_f2(fy * MUL) * tp1_y / tp1_z) + trunc_lsm_f2(oy * MUL)) / MUL);
+                    //cout << "test begin" << endl;
+                    //cout << u1 << " " << v1 << " "<< u0 << " "<< v0 << endl;
+                    //cout << "test end" << endl;
+                    if(r.contains(Point(u0,v0)))
+                    {
+                        double d0 = depth0.at<double>(v0,u0);
+                        if(validMask0.at<uchar>(v0, u0) && std::abs(tp1_z - trunc1(d0*MUL)) <= trunc1(maxDepthDiff*MUL) && std::abs(v1 - v0) <= maxLineDiff)
+                        {
+                            Vec2s& c = corresps.at<Vec2s>(v0,u0);
+                            if(c[0] != -1)
+                            {
+                                int exist_u1 = c[0], exist_v1 = c[1];
+
+                                double exist_p1_x = trunc_3d(trunc_3d(trunc_3d(exist_u1*MUL - trunc_3d(ox*MUL)) * d1 / trunc_3d(fx*MUL)) * MUL);
+                                double exist_p1_y = trunc_3d(trunc_3d(trunc_3d(exist_v1*MUL - trunc_3d(oy*MUL)) * d1 / trunc_3d(fy*MUL)) * MUL);
+                                double exist_p1_z = trunc_3d(depth1.at<double>(exist_v1,exist_u1) * MUL);
+                                double exist_tp1_z = trunc_lsm_f1(exist_p1_x * Rt_ptr[8] / MUL) + trunc_lsm_f1(exist_p1_y * Rt_ptr[9] / MUL) + trunc_lsm_f1(exist_p1_z * Rt_ptr[10] / MUL) + Rt_ptr[11];
+                                if(tp1_z > exist_tp1_z)
+                                    continue;
+                            }
+                            else
+                                correspCount++;
+
+                            c = Vec2s((short)u1, (short)v1);
+                            
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    int v_max_corr = 0;
+    _corresps.create(correspCount, 1, CV_32SC4);
+    Vec4i * corresps_ptr = _corresps.ptr<Vec4i>();
+    for(int v0 = 0, i = 0; v0 < corresps.rows; v0++)
+    {
+        const Vec2s* corresps_row = corresps.ptr<Vec2s>(v0);
+        for(int u0 = 0; u0 < corresps.cols; u0++)
+        {
+            const Vec2s& c = corresps_row[u0];
+            if(c[0] != -1)
+            {
+                //corresps_ptr[i++] = Vec4i(u0,v0,c[0],c[1]);
+                corresps_ptr[i++] = Vec4i(c[0],c[1],u0,v0);
+                int v_diff = abs(v0-c[1]);
+                if(v_diff > v_max_corr)
+                    v_max_corr = v_diff;
+            }
+        }
+    }
+    return v_max_corr;
+}
+
+static
 int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
                      const Mat& depth0, const Mat& validMask0,
                      const Mat& depth1, const Mat& selectMask1, double maxDepthDiff,
@@ -643,6 +732,10 @@ int computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
             }
         }
     }
+    cout << "begin" << endl;
+    cout << _corresps << endl;
+    cout << "end" << endl;
+    //exit(0);
     return v_max_corr;
 }
 
@@ -695,6 +788,7 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
          sigma += diffs_ptr[correspIndex] * diffs_ptr[correspIndex];
     }
     sigma = trunc1(std::sqrt(trunc1(sigma/correspsCount)));
+    //cout << "sigma: " << sigma << endl;
 
     std::vector<double> A_buf(transformDim);
     double* A_ptr = &A_buf[0];
@@ -1455,21 +1549,33 @@ bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFram
             Mat AtA(transformDim, transformDim, CV_64FC1, Scalar(0)), AtB(transformDim, 1, CV_64FC1, Scalar(0));
             if(iter>=feature_iter_num){
                 //Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
-
-                int v_rgbd = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, 
+                /*
+                //int v_rgbd = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, 
+                int v_rgbd = computeCorresps_hw(levelCameraMatrix, levelCameraMatrix_inv, 
                                              //resultRt_inv, srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskText,
                                              //resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskText,
                                              resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskDepth,
                                              maxDepthDiff, corresps_rgbd);
                 if (v_rgbd > v_max)
                     v_max = v_rgbd;
-                int v_icp = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, 
+                //int v_icp = computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, 
+                int v_icp = computeCorresps_hw(levelCameraMatrix, levelCameraMatrix_inv, 
                                             //resultRt_inv, srcLevelDepth, srcFrame->maskDepth, dstLevelDepth, dstFrame->maskNormal,
                                             resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskDepth,
                                             maxDepthDiff, corresps_icp);
                 
                 if (v_icp > v_max)
                     v_max = v_icp;
+                */
+                int v_rgbd = computeCorresps_hw(levelCameraMatrix, levelCameraMatrix_inv, 
+                                             resultRt, dstLevelDepth, dstFrame->maskDepth, srcLevelDepth, srcFrame->maskDepth,
+                                             maxDepthDiff, corresps_rgbd);
+                corresps_icp = corresps_rgbd;
+                if (v_rgbd > v_max)
+                    v_max = v_rgbd;
+
+               //cout << "corresps_rgbd " << corresps_rgbd.size() << endl;
+               //cout << "corresps_icp " << corresps_icp.size() << endl;
 
                 if(corresps_rgbd.rows >= minCorrespsCount)
                 {
