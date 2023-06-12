@@ -24,17 +24,18 @@
 `include "./TransMat.sv"
 `include "./Proj.sv"
 `include "./DataDelay.sv"
-`include "./IndirectCoe.sv"
-`include "./IndirectCalc.sv"
-`include "./MulAcc.sv"
-`include "./Matrix.sv"
-`include "./LDLT.sv"
-`include "./Solver.sv"
-`include "./DW_sqrt.v"
-`include "./DW_sqrt_pipe.v"
-`include "./DW_sincos.v"
-`include "./Rodrigues.sv"
-`include "./UpdatePose.sv"
+//`include "./IndirectCoe.sv"
+//`include "./IndirectCalc.sv"
+//`include "./MulAcc.sv"
+//`include "./Matrix.sv"
+//`include "./LDLT.sv"
+//`include "./Solver.sv"
+//`include "./DW_sqrt.v"
+//`include "./DW_sqrt_pipe.v"
+//`include "./DW_sincos.v"
+//`include "./Rodrigues.sv"
+//`include "./UpdatePose.sv"
+`include "./DirectCorrCalc.sv"
 
 module direct_tb;
     import RgbdVoConfigPk::*;
@@ -162,6 +163,8 @@ module direct_tb;
     logic [34:0] r_cx;
     logic [34:0] r_cy;
     logic [41:0] initial_pose [12];
+    logic [H_SIZE_BW-1:0] r_hsize;
+    logic [V_SIZE_BW-1:0] r_vsize;
 
     //assign initial_pose[0]  = 42'd16777216;
     //assign initial_pose[1]  = 42'd0;
@@ -175,23 +178,60 @@ module direct_tb;
     //assign initial_pose[9]  = 42'd0;
     //assign initial_pose[10] = 42'd16777216;
     //assign initial_pose[11] = 42'd0;
-    assign initial_pose[0] = 42'sd16777001;
-    assign initial_pose[1] = -42'sd69812;
-    assign initial_pose[2] = 42'sd48217;
-    assign initial_pose[3] = 42'sd318084634;
-    assign initial_pose[4] = 42'sd68808;
-    assign initial_pose[5] = 42'sd16773537;
-    assign initial_pose[6] = 42'sd344465;
-    assign initial_pose[7] = 42'sd628608084;
-    assign initial_pose[8] = -42'sd49639;
-    assign initial_pose[9] = -42'sd344263;
-    assign initial_pose[10] = 42'sd16773609;
-    assign initial_pose[11] = -42'sd381085875;
+    //assign initial_pose[0] = 42'sd16777001;
+    //assign initial_pose[1] = -42'sd69812;
+    //assign initial_pose[2] = 42'sd48217;
+    //assign initial_pose[3] = 42'sd318084634;
+    //assign initial_pose[4] = 42'sd68808;
+    //assign initial_pose[5] = 42'sd16773537;
+    //assign initial_pose[6] = 42'sd344465;
+    //assign initial_pose[7] = 42'sd628608084;
+    //assign initial_pose[8] = -42'sd49639;
+    //assign initial_pose[9] = -42'sd344263;
+    //assign initial_pose[10] = 42'sd16773609;
+    //assign initial_pose[11] = -42'sd381085875;
+    assign initial_pose[0] = 42'sd16776931;
+    assign initial_pose[1] = -42'sd84702;
+    assign initial_pose[2] = 42'sd47951;
+    assign initial_pose[3] = 42'sd318592230;
+    assign initial_pose[4] = 42'sd83604;
+    assign initial_pose[5] = 42'sd16772789;
+    assign initial_pose[6] = 42'sd376116;
+    assign initial_pose[7] = 42'sd502279940;
+    assign initial_pose[8] = -42'sd49839;
+    assign initial_pose[9] = -42'sd375874;
+    assign initial_pose[10] = 42'sd16772927;
+    assign initial_pose[11] = -42'sd141558549;
 
     assign r_fx = 35'd8678853836;
     assign r_fy = 35'd8665432064;
     assign r_cx = 35'd5345221017;
     assign r_cy = 35'd4283223244;
+    assign r_hsize = 'd640;
+    assign r_vsize = 'd480;
+
+    DirectCorrCalc u_directcorrcalc(
+        // input
+         .i_clk         ( clk )
+        ,.i_rst_n       ( rst_n)
+        ,.i_frame_start ( frame_start )
+        ,.i_frame_end   ( frame_end )
+        ,.i_valid       ( valid )
+        ,.i_data0       ( pixel0_i ) 
+        ,.i_depth0      ( depth0_i )
+        ,.i_pose        ( initial_pose )
+        // Register
+        ,.r_fx           ( r_fx )
+        ,.r_fy           ( r_fy )
+        ,.r_cx           ( r_cx )
+        ,.r_cy           ( r_cy )
+        ,.r_hsize        ( r_hsize )
+        ,.r_vsize        ( r_vsize )
+        // Output
+        ,.o_frame_start  (  )
+        ,.o_frame_end    (  )
+        ,.o_valid        (  )
+    );
 
 
 
