@@ -36,6 +36,8 @@
 //`include "./Rodrigues.sv"
 //`include "./UpdatePose.sv"
 `include "./DirectCorrCalc.sv"
+`include "./LineBufCtrl.sv"
+`include "sram_v3/sram_lb_FAST.v"
 
 module direct_tb;
     import RgbdVoConfigPk::*;
@@ -166,6 +168,16 @@ module direct_tb;
     logic [H_SIZE_BW-1:0] r_hsize;
     logic [V_SIZE_BW-1:0] r_vsize;
 
+    logic                     corr_frame_start;
+    logic                     corr_frame_end;
+    logic                     corr_valid;
+    logic [DATA_DEPTH_BW-1:0] corr_depth0;
+    logic [CLOUD_BW-1:0]      corr_trans_z0;
+    logic [H_SIZE_BW-1:0]     corr_idx0_x;
+    logic [V_SIZE_BW-1:0]     corr_idx0_y;
+    logic [H_SIZE_BW-1:0]     corr_idx1_x;
+    logic [V_SIZE_BW-1:0]     corr_idx1_y;
+
     //assign initial_pose[0]  = 42'd16777216;
     //assign initial_pose[1]  = 42'd0;
     //assign initial_pose[2]  = 42'd0;
@@ -209,7 +221,7 @@ module direct_tb;
     assign r_cy = 35'd4283223244;
     assign r_hsize = 'd640;
     assign r_vsize = 'd480;
-
+    /*
     DirectCorrCalc u_directcorrcalc(
         // input
          .i_clk         ( clk )
@@ -228,12 +240,121 @@ module direct_tb;
         ,.r_hsize        ( r_hsize )
         ,.r_vsize        ( r_vsize )
         // Output
+        ,.o_frame_start  ( corr_frame_start )
+        ,.o_frame_end    ( corr_frame_end   )
+        ,.o_valid        ( corr_valid       )
+        ,.o_depth0       ( corr_depth0      )
+        ,.o_trans_z0     ( corr_trans_z0    )
+        ,.o_idx0_x       ( corr_idx0_x      )
+        ,.o_idx0_y       ( corr_idx0_y      )
+        ,.o_idx1_x       ( corr_idx1_x      )
+        ,.o_idx1_y       ( corr_idx1_y      )
+    );
+    */
+    LineBufCtrl u_line_buf_ctrl(
+        // input
+         .i_clk         ( clk )
+        ,.i_rst_n       ( rst_n)
+        ,.i_frame_start (  )
+        ,.i_frame_end   (  )
+        ,.i_valid       ( valid )
+        ,.i_data1       ( pixel1_i ) 
+        ,.i_depth1      ( depth1_i )
+        // Register
+        ,.r_hsize        ( r_hsize )
+        ,.r_vsize        ( r_vsize )
+        // SRAM
+        ,.i_lb_sram_QA   (  )
+        ,.i_lb_sram_QB   (  )
+        ,.o_lb_sram_WENA (  )
+        ,.o_lb_sram_WENB (  )
+        ,.o_lb_sram_DA   (  )
+        ,.o_lb_sram_DB   (  )
+        ,.o_lb_sram_AA   (  )
+        ,.o_lb_sram_AB   (  )
+        // Output
         ,.o_frame_start  (  )
         ,.o_frame_end    (  )
         ,.o_valid        (  )
+        ,.o_depth0       (  )
     );
 
+    logic [23:0]     bus1_sram_QA [0:5];
+    logic [23:0]     bus1_sram_QB [0:5];
+    logic          bus1_sram_WENA [0:5];
+    logic          bus1_sram_WENB [0:5];
+    logic [23:0]    bus1_sram_DA [0:5]; // pixel + depth
+    logic [23:0]    bus1_sram_DB [0:5]; // pixel + depth
+    logic [9:0]    bus1_sram_AA [0:5];
+    logic [9:0]    bus1_sram_AB [0:5];
 
+    generate
+        for(genvar s = 0; s < 6; s = s+1) begin
+            sram_lb_FAST uut1 (
+                // clock signal
+                .CLKA(clk),
+                .CLKB(clk),
+
+                // sync clock (active high)
+                .STOVA(1'b1),
+                .STOVB(1'b1),
+
+                // setting
+                // In the event of a write/read collision, if COLLDISN is disabled, then the write is guaranteed and
+                // the read data is undefined. However, if COLLDISN is enabled, then the write is not guaranteed
+                // if the read row address and write row address match.
+                .COLLDISN(1'b0),
+
+                // address
+                .AA(bus1_sram_AA[s]),
+                .AB(bus1_sram_AB[s]),
+                // data 
+                .DA(bus1_sram_DA[s]),
+                .DB(bus1_sram_DB[s]),
+
+                // chip enable (active low, 0 for ON and 1 for OFF)
+                // .CENA(1'b1),
+                // .CENB(1'b1),
+                .CENA(1'b0),
+                .CENB(1'b0),
+
+                // write enable (active low, 0 for WRITE and 1 for READ)
+                .WENA(bus1_sram_WENA[s]),
+                .WENB(bus1_sram_WENB[s]),
+
+                // data output bus
+                .QA(bus1_sram_QA[s]),
+                .QB(bus1_sram_QB[s]),
+
+                // test mode (active low, 1 for regular operation)
+                .TENA(1'b1),
+                .TENB(1'b1),
+
+                // bypass
+                .BENA(1'b1),
+                .BENB(1'b1),
+
+                // useless
+                .EMAA(3'd0),
+                .EMAB(3'd0),
+                .EMAWA(2'd0),
+                .EMAWB(2'd0),
+                .EMASA(1'b0),
+                .EMASB(1'b0),
+                .TCENA(1'b1),
+                .TWENA(1'b1),
+                .TAA(10'd0),
+                .TDA(24'd0),
+                .TQA(24'd0),
+                .TCENB(1'b1),
+                .TWENB(1'b1),
+                .TAB(10'd0),
+                .TDB(24'd0),
+                .TQB(24'd0),
+                .RET1N(1'b1)
+            );
+        end
+    endgenerate
 
                            
     always @(posedge clk)begin

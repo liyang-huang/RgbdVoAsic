@@ -30,7 +30,9 @@ module DirectCorrCalc
     ,output logic                     o_frame_start
     ,output logic                     o_frame_end
     ,output logic                     o_valid
+    ,output logic [DATA_RGB_BW-1:0]   o_data0
     ,output logic [DATA_DEPTH_BW-1:0] o_depth0
+    ,output logic [CLOUD_BW-1:0]      o_trans_z0
     ,output logic [H_SIZE_BW-1:0]     o_idx0_x
     ,output logic [V_SIZE_BW-1:0]     o_idx0_y
     ,output logic [H_SIZE_BW-1:0]     o_idx1_x
@@ -65,6 +67,7 @@ module DirectCorrCalc
     logic [DATA_DEPTH_BW-1:0] depth0_d12;
     logic [H_SIZE_BW-1:0]     idx0_x_d12;
     logic [V_SIZE_BW-1:0]     idx0_y_d12;
+    logic [CLOUD_BW-1:0]      trans_z_d4;
 
     //=================================
     // Combinational Logic
@@ -73,6 +76,7 @@ module DirectCorrCalc
     assign o_idx0_y = idx0_y_d12;
     assign o_idx1_x = proj_x;
     assign o_idx1_y = proj_y;
+    assign o_trans_z0 = trans_z_d4;
     assign o_valid = proj_valid;
     assign idx0_x_clr = (idx0_x_r==r_hsize-1);
     assign idx0_y_clr = (idx0_y_r==r_vsize-1);
@@ -133,6 +137,32 @@ module DirectCorrCalc
         ,.o_valid   ( proj_valid ) 
         ,.o_idx_x   ( proj_x )
         ,.o_idx_y   ( proj_y )
+    );
+
+    DataDelay
+    #(
+        .DATA_BW(1)
+       ,.STAGE(12)
+    ) u_frame_start (
+        // input
+         .i_clk(i_clk)
+        ,.i_rst_n(i_rst_n)
+        ,.i_data(i_frame_start)
+        // Output
+        ,.o_data(o_frame_start)
+    );
+
+    DataDelay
+    #(
+        .DATA_BW(1)
+       ,.STAGE(12)
+    ) u_frame_end (
+        // input
+         .i_clk(i_clk)
+        ,.i_rst_n(i_rst_n)
+        ,.i_data(i_frame_end)
+        // Output
+        ,.o_data(o_frame_end)
     );
 
     DataDelay
@@ -224,6 +254,19 @@ module DirectCorrCalc
         ,.i_data(idx0_y_d1)
         // Output
         ,.o_data(idx0_y_d12)
+    );
+
+    DataDelay
+    #(
+        .DATA_BW(CLOUD_BW)
+       ,.STAGE(4)
+    ) u_trans_z_delay (
+        // input
+         .i_clk(i_clk)
+        ,.i_rst_n(i_rst_n)
+        ,.i_data(trans_z)
+        // Output
+        ,.o_data(trans_z_d4)
     );
 
     always_comb begin
