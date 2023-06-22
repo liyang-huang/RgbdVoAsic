@@ -51,6 +51,7 @@
 //
 `timescale 1 ns/1 ps
 // If ARM_UD_MODEL is defined at Simulator Command Line, it Selects the Fast Functional Model
+`define ARM_UD_MODEL
 `ifdef ARM_UD_MODEL
 
 // Following parameter Values can be overridden at Simulator Command Line.

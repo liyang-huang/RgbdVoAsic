@@ -1,6 +1,6 @@
 `timescale 1ns/10ps
 `define CYCLE    10           	         // Modify your clock period here
-`define TIME_OUT 640*1500*10       
+`define TIME_OUT 640*10*10       
 // `define TIME_OUT 640*100*10     
 
 
@@ -37,6 +37,7 @@
 //`include "./UpdatePose.sv"
 `include "./DirectCorrCalc.sv"
 `include "./LineBufCtrl.sv"
+//`include "sram_v3/sram_dp_depth.v"
 `include "sram_v3/sram_lb_FAST.v"
 
 module direct_tb;
@@ -251,6 +252,19 @@ module direct_tb;
         ,.o_idx1_y       ( corr_idx1_y      )
     );
     */
+    //logic [15:0]     bus1_sram_QA [0:60];
+    //logic [15:0]     bus1_sram_QB [0:60];
+    logic [23:0]     bus1_sram_QA [0:60];
+    logic [23:0]     bus1_sram_QB [0:60];
+    logic          bus1_sram_WENA [0:60];
+    logic          bus1_sram_WENB [0:60];
+    //logic [15:0]    bus1_sram_DA [0:60]; // pixel + depth
+    //logic [15:0]    bus1_sram_DB [0:60]; // pixel + depth
+    logic [23:0]    bus1_sram_DA [0:60]; // pixel + depth
+    logic [23:0]    bus1_sram_DB [0:60]; // pixel + depth
+    logic [9:0]    bus1_sram_AA [0:60];
+    logic [9:0]    bus1_sram_AB [0:60];
+
     LineBufCtrl u_line_buf_ctrl(
         // input
          .i_clk         ( clk )
@@ -264,14 +278,14 @@ module direct_tb;
         ,.r_hsize        ( r_hsize )
         ,.r_vsize        ( r_vsize )
         // SRAM
-        ,.i_lb_sram_QA   (  )
-        ,.i_lb_sram_QB   (  )
-        ,.o_lb_sram_WENA (  )
-        ,.o_lb_sram_WENB (  )
-        ,.o_lb_sram_DA   (  )
-        ,.o_lb_sram_DB   (  )
-        ,.o_lb_sram_AA   (  )
-        ,.o_lb_sram_AB   (  )
+        ,.i_lb_sram_QA   ( bus1_sram_QA )
+        ,.i_lb_sram_QB   ( bus1_sram_QB )
+        ,.o_lb_sram_WENA ( bus1_sram_WENA )
+        ,.o_lb_sram_WENB ( bus1_sram_WENB )
+        ,.o_lb_sram_DA   ( bus1_sram_DA )
+        ,.o_lb_sram_DB   ( bus1_sram_DB )
+        ,.o_lb_sram_AA   ( bus1_sram_AA )
+        ,.o_lb_sram_AB   ( bus1_sram_AB )
         // Output
         ,.o_frame_start  (  )
         ,.o_frame_end    (  )
@@ -279,17 +293,9 @@ module direct_tb;
         ,.o_depth0       (  )
     );
 
-    logic [23:0]     bus1_sram_QA [0:5];
-    logic [23:0]     bus1_sram_QB [0:5];
-    logic          bus1_sram_WENA [0:5];
-    logic          bus1_sram_WENB [0:5];
-    logic [23:0]    bus1_sram_DA [0:5]; // pixel + depth
-    logic [23:0]    bus1_sram_DB [0:5]; // pixel + depth
-    logic [9:0]    bus1_sram_AA [0:5];
-    logic [9:0]    bus1_sram_AB [0:5];
-
     generate
-        for(genvar s = 0; s < 6; s = s+1) begin
+        for(genvar s = 0; s < 61; s = s+1) begin
+            //sram_dp_depth uut1 (
             sram_lb_FAST uut1 (
                 // clock signal
                 .CLKA(clk),
@@ -344,13 +350,13 @@ module direct_tb;
                 .TCENA(1'b1),
                 .TWENA(1'b1),
                 .TAA(10'd0),
-                .TDA(24'd0),
-                .TQA(24'd0),
+                .TDA(16'd0),
+                .TQA(16'd0),
                 .TCENB(1'b1),
                 .TWENB(1'b1),
                 .TAB(10'd0),
-                .TDB(24'd0),
-                .TQB(24'd0),
+                .TDB(16'd0),
+                .TQB(16'd0),
                 .RET1N(1'b1)
             );
         end
