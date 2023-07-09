@@ -26,6 +26,11 @@ package RgbdVoConfigPk;
     parameter SRC_WID_BW = $clog2(MAX_SRC_WID + 1);
     parameter SRC_HGT_BW = $clog2(MAX_SRC_HGT + 1);
 
+    parameter MIN_DEPTH = 0;
+    parameter MAX_DEPTH = 20000;
+    parameter MAX_DIFF_DEPTH = 350;
+    parameter MAX_DIFF_LINE = 30;
+
     //=================================
     // Register Memory Map Define
     //=================================

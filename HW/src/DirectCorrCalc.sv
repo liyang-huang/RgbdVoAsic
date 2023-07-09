@@ -32,7 +32,7 @@ module DirectCorrCalc
     ,output logic                     o_valid
     ,output logic [DATA_RGB_BW-1:0]   o_data0
     ,output logic [DATA_DEPTH_BW-1:0] o_depth0
-    ,output logic [CLOUD_BW-1:0]      o_trans_z0
+    ,output logic [CLOUD_BW-1:0]      o_trans_z1
     ,output logic [H_SIZE_BW-1:0]     o_idx0_x
     ,output logic [V_SIZE_BW-1:0]     o_idx0_y
     ,output logic [H_SIZE_BW-1:0]     o_idx1_x
@@ -68,6 +68,14 @@ module DirectCorrCalc
     logic [H_SIZE_BW-1:0]     idx0_x_d12;
     logic [V_SIZE_BW-1:0]     idx0_y_d12;
     logic [CLOUD_BW-1:0]      trans_z_d4;
+    logic [V_SIZE_BW-1:0]     diff_y;
+    logic [DATA_DEPTH_BW-1:0] depth0_d13;
+    logic [H_SIZE_BW-1:0]     idx0_x_d13;
+    logic [V_SIZE_BW-1:0]     idx0_y_d13;
+    logic [CLOUD_BW-1:0]      trans_z_d5;
+    logic                     proj_valid_d1;
+    logic [H_SIZE_BW-1:0]     proj_x_d1;
+    logic [V_SIZE_BW-1:0]     proj_y_d1;
 
     //=================================
     // Combinational Logic
@@ -76,11 +84,13 @@ module DirectCorrCalc
     assign o_idx0_y = idx0_y_d12;
     assign o_idx1_x = proj_x;
     assign o_idx1_y = proj_y;
-    assign o_trans_z0 = trans_z_d4;
+    assign o_trans_z1 = trans_z_d4;
+    assign o_depth0 = depth0_d12;
     assign o_valid = proj_valid;
     assign idx0_x_clr = (idx0_x_r==r_hsize-1);
     assign idx0_y_clr = (idx0_y_r==r_vsize-1);
-    
+    assign diff_y = (proj_y > idx0_y_d12)? proj_y - idx0_y_d12 : idx0_y_d12 - proj_y;
+
     //4T
     Idx2Cloud u_idx2cloud (
         // input
@@ -308,8 +318,38 @@ module DirectCorrCalc
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if (!i_rst_n) valid_depth0_r <= 0;
-        else if(i_valid && i_depth0>0 && i_depth0<'d20000) valid_depth0_r <= 1;
+        else if(i_valid && i_depth0>MIN_DEPTH && i_depth0<MAX_DEPTH) valid_depth0_r <= 1;
         else valid_depth0_r <= 0;
+    end
+
+    always_ff @(posedge i_clk or negedge i_rst_n) begin
+        if (!i_rst_n) begin
+            depth0_d13 <= '0;
+            idx0_x_d13 <= '0;
+            idx0_y_d13 <= '0;
+            trans_z_d5 <= '0;
+            proj_x_d1 <= '0;
+            proj_y_d1 <= '0;
+            proj_valid_d1 <= '0;
+        end
+        else if((diff_y <= MAX_DIFF_LINE) && proj_valid) begin
+            depth0_d13 <= depth0_d12;
+            idx0_x_d13 <= idx0_x_d12;
+            idx0_y_d13 <= idx0_y_d12;
+            trans_z_d5 <= trans_z_d4;
+            proj_x_d1 <= proj_x;
+            proj_y_d1 <= proj_y;
+            proj_valid_d1 <= proj_valid;
+        end
+        else begin
+            depth0_d13 <= '0;
+            idx0_x_d13 <= '0;
+            idx0_y_d13 <= '0;
+            trans_z_d5 <= '0;
+            proj_x_d1 <= '0;
+            proj_y_d1 <= '0;
+            proj_valid_d1 <= '0;
+        end
     end
 
 

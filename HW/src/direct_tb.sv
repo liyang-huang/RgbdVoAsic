@@ -1,6 +1,11 @@
 `timescale 1ns/10ps
 `define CYCLE    10           	         // Modify your clock period here
-`define TIME_OUT 640*10*10       
+`define H_ACT 640
+`define H_BLANK 64
+`define H_TOTAL (`H_ACT+`H_BLANK)
+`define V_ACT 480
+`define V_TOTAL `V_ACT
+`define TIME_OUT `H_TOTAL*(`V_TOTAL+31+10)*2*`CYCLE       
 // `define TIME_OUT 640*100*10     
 
 
@@ -38,12 +43,14 @@
 `include "./DirectCorrCalc.sv"
 `include "./LineBufCtrl.sv"
 //`include "sram_v3/sram_dp_depth.v"
-`include "sram_v3/sram_lb_FAST.v"
+//`include "sram_v3/sram_lb_FAST.v"
+`include "sram_v3/sram_lb_16b.v"
+
 
 module direct_tb;
     import RgbdVoConfigPk::*;
     
-    integer i, j, f1, f2, err, index;
+    integer ix, iy, jx, jy, f1, f2, err, index;
     // genvar s;
     logic clk, rst_n;
     logic clk_ref;
@@ -59,7 +66,8 @@ module direct_tb;
 
     logic frame_start;
     logic tx_en;
-    logic valid;
+    logic valid0;
+    logic valid1;
     
     // `ifdef SDF
     //     initial $sdf_annotate(`SDFFILE, chip0);
@@ -78,11 +86,10 @@ module direct_tb;
         // f = $fopen("fft_o.txt","w");
         clk_ref         = 1'b1;
         rst_n       = 1'b1;  
-        i           = 0;
-        j           = 0;
         index       = 0;
         err         = 0;
-        valid     = 0;
+        valid0     = 0;
+        valid1     = 0;
         frame_start     = 0;
         #5 rst_n=1'b0;         
         #5 rst_n=1'b1;
@@ -122,43 +129,95 @@ module direct_tb;
     logic valid_d1, frame_end;
     always @(posedge clk or negedge rst_n)begin
         if(!rst_n) valid_d1 <= 0;
-        else valid_d1 <= valid; 
+        else valid_d1 <= valid0; 
     end
 
     always @(posedge clk or negedge rst_n)begin
         if(!rst_n) frame_end <= 0;
-        else if(!valid && valid_d1) frame_end <= 1; 
+        else if(!valid0 && valid_d1) frame_end <= 1; 
         else frame_end <= 0; 
     end
 
     always @(posedge clk or negedge rst_n)begin
         if(!rst_n) tx_en <= 0;
-        else if(frame_start) tx_en <= 1; 
+        //else if(frame_start) tx_en <= 1; 
+        else if(jy==31) tx_en <= 1; 
+    end
+
+    always @(posedge clk or negedge rst_n)begin
+        if(!rst_n)
+           ix <= 0; 
+        else if(tx_en) begin
+            if(ix == `H_TOTAL-1 && iy == `V_TOTAL-1) 
+               ix <= ix; 
+            else if(ix == `H_TOTAL-1) 
+               ix <= 0; 
+            else
+                ix <= ix+1; 
+        end
+    end
+
+    always @(posedge clk or negedge rst_n)begin
+        if(!rst_n) 
+           iy <= 0; 
+        else if(tx_en) begin
+            if(ix == `H_TOTAL-1 && iy == `V_TOTAL-1) 
+               iy <= iy; 
+            else if(ix == `H_TOTAL-1) 
+                iy <= iy+1; 
+        end
     end
 
     always @(posedge clk or negedge rst_n)begin
         if(!rst_n) begin
            pixel0_i <= 0;
-           pixel1_i <= 0;
            depth0_i <= 0;
-           depth1_i <= 0;
-
-           valid <= 0;
-           i <= 0; 
+           valid0 <= 0;
         end
         if(tx_en) begin
-            if(i < 307200) begin
-                pixel0_i <= pixel_in[i];
-                pixel1_i <= pixel_in2[i];
-                depth0_i <= depth_in[i];
-                depth1_i <= depth_in2[i];
-
-                valid <= 1;
-                i <= i+1; 
+            if(tx_en && ix<`H_ACT) begin
+                pixel0_i <= pixel_in[iy*`H_ACT+ix];
+                depth0_i <= depth_in[iy*`H_ACT+ix];
+                valid0 <= 1;
             end
             else
-                valid <= 0;
+                valid0 <= 0;
         end
+    end
+
+    always @(posedge clk or negedge rst_n)begin
+        if(!rst_n)
+           jx <= 0; 
+        else if(jx == `H_TOTAL-1 && jy == `V_TOTAL-1) 
+           jx <= jx; 
+        else if(jx == `H_TOTAL-1) 
+           jx <= 0; 
+        else
+            jx <= jx+1; 
+    end
+
+    always @(posedge clk or negedge rst_n)begin
+        if(!rst_n) 
+           jy <= 0; 
+        else if(jx == `H_TOTAL-1 && jy == `V_TOTAL-1) 
+           jy <= jy; 
+        else if(jx == `H_TOTAL-1) 
+            jy <= jy+1; 
+    end
+
+    always @(posedge clk or negedge rst_n)begin
+        if(!rst_n) begin
+           pixel1_i <= 0;
+           depth1_i <= 0;
+           valid1 <= 0;
+        end
+        else if(jx < `H_ACT) begin
+            pixel1_i <= pixel_in2[jy*`H_ACT+jx];
+            depth1_i <= depth_in2[jy*`H_ACT+jx];
+            valid1 <= 1;
+        end
+        else
+            valid1 <= 0;
     end
 
     logic [34:0] r_fx;
@@ -173,7 +232,7 @@ module direct_tb;
     logic                     corr_frame_end;
     logic                     corr_valid;
     logic [DATA_DEPTH_BW-1:0] corr_depth0;
-    logic [CLOUD_BW-1:0]      corr_trans_z0;
+    logic [CLOUD_BW-1:0]      corr_trans_z1;
     logic [H_SIZE_BW-1:0]     corr_idx0_x;
     logic [V_SIZE_BW-1:0]     corr_idx0_y;
     logic [H_SIZE_BW-1:0]     corr_idx1_x;
@@ -222,14 +281,14 @@ module direct_tb;
     assign r_cy = 35'd4283223244;
     assign r_hsize = 'd640;
     assign r_vsize = 'd480;
-    /*
+    
     DirectCorrCalc u_directcorrcalc(
         // input
          .i_clk         ( clk )
         ,.i_rst_n       ( rst_n)
         ,.i_frame_start ( frame_start )
         ,.i_frame_end   ( frame_end )
-        ,.i_valid       ( valid )
+        ,.i_valid       ( valid0 )
         ,.i_data0       ( pixel0_i ) 
         ,.i_depth0      ( depth0_i )
         ,.i_pose        ( initial_pose )
@@ -245,33 +304,36 @@ module direct_tb;
         ,.o_frame_end    ( corr_frame_end   )
         ,.o_valid        ( corr_valid       )
         ,.o_depth0       ( corr_depth0      )
-        ,.o_trans_z0     ( corr_trans_z0    )
+        ,.o_trans_z1     ( corr_trans_z1    )
         ,.o_idx0_x       ( corr_idx0_x      )
         ,.o_idx0_y       ( corr_idx0_y      )
         ,.o_idx1_x       ( corr_idx1_x      )
         ,.o_idx1_y       ( corr_idx1_y      )
     );
-    */
-    //logic [15:0]     bus1_sram_QA [0:60];
-    //logic [15:0]     bus1_sram_QB [0:60];
-    logic [23:0]     bus1_sram_QA [0:60];
-    logic [23:0]     bus1_sram_QB [0:60];
-    logic          bus1_sram_WENA [0:60];
-    logic          bus1_sram_WENB [0:60];
-    //logic [15:0]    bus1_sram_DA [0:60]; // pixel + depth
-    //logic [15:0]    bus1_sram_DB [0:60]; // pixel + depth
-    logic [23:0]    bus1_sram_DA [0:60]; // pixel + depth
-    logic [23:0]    bus1_sram_DB [0:60]; // pixel + depth
-    logic [9:0]    bus1_sram_AA [0:60];
-    logic [9:0]    bus1_sram_AB [0:60];
+    
+    logic [15:0]     bus1_sram_QA [0:61];
+    logic [15:0]     bus1_sram_QB [0:61];
+    logic          bus1_sram_WENA [0:61];
+    logic          bus1_sram_WENB [0:61];
+    logic [15:0]    bus1_sram_DA  [0:61]; // pixel + depth
+    logic [15:0]    bus1_sram_DB  [0:61]; // pixel + depth
+    logic [9:0]    bus1_sram_AA   [0:61];
+    logic [9:0]    bus1_sram_AB   [0:61];
 
     LineBufCtrl u_line_buf_ctrl(
         // input
          .i_clk         ( clk )
         ,.i_rst_n       ( rst_n)
-        ,.i_frame_start (  )
-        ,.i_frame_end   (  )
-        ,.i_valid       ( valid )
+        ,.i_frame_start ( corr_frame_start )
+        ,.i_frame_end   ( corr_frame_end   )
+        ,.i_valid0       ( corr_valid       )
+        ,.i_depth0      ( corr_depth0      )
+        ,.i_trans_z1    ( corr_trans_z1    )
+        ,.i_idx0_x      ( corr_idx0_x      )
+        ,.i_idx0_y      ( corr_idx0_y      )
+        ,.i_idx1_x      ( corr_idx1_x      )
+        ,.i_idx1_y      ( corr_idx1_y      )
+        ,.i_valid1      ( valid1 )
         ,.i_data1       ( pixel1_i ) 
         ,.i_depth1      ( depth1_i )
         // Register
@@ -294,9 +356,9 @@ module direct_tb;
     );
 
     generate
-        for(genvar s = 0; s < 61; s = s+1) begin
+        for(genvar s = 0; s < 62; s = s+1) begin
             //sram_dp_depth uut1 (
-            sram_lb_FAST uut1 (
+            sram_lb_16b uut1 (
                 // clock signal
                 .CLKA(clk),
                 .CLKB(clk),
