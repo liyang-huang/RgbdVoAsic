@@ -311,14 +311,26 @@ module direct_tb;
         ,.o_idx1_y       ( corr_idx1_y      )
     );
     
-    logic [15:0]     bus1_sram_QA [0:61];
-    logic [15:0]     bus1_sram_QB [0:61];
-    logic          bus1_sram_WENA [0:61];
-    logic          bus1_sram_WENB [0:61];
-    logic [15:0]    bus1_sram_DA  [0:61]; // pixel + depth
-    logic [15:0]    bus1_sram_DB  [0:61]; // pixel + depth
-    logic [9:0]    bus1_sram_AA   [0:61];
-    logic [9:0]    bus1_sram_AB   [0:61];
+    logic [15:0]     bus1_sram_QA [0:63];
+    logic [15:0]     bus1_sram_QB [0:63];
+    logic          bus1_sram_WENA [0:63];
+    logic          bus1_sram_WENB [0:63];
+    logic [15:0]    bus1_sram_DA  [0:63]; // pixel + depth
+    logic [15:0]    bus1_sram_DB  [0:63]; // pixel + depth
+    logic [9:0]    bus1_sram_AA   [0:63];
+    logic [9:0]    bus1_sram_AB   [0:63];
+
+    logic                     buf_frame_start;
+    logic                     buf_frame_end;
+    logic                     buf_valid;
+    logic [H_SIZE_BW-1:0]     buf_idx0_x;
+    logic [V_SIZE_BW-1:0]     buf_idx0_y;
+    logic [H_SIZE_BW-1:0]     buf_idx1_x;
+    logic [V_SIZE_BW-1:0]     buf_idx1_y;
+    logic [DATA_DEPTH_BW-1:0] buf_depth0;
+    logic [DATA_DEPTH_BW-1:0] buf_depth1;
+    logic [DATA_RGB_BW-1:0]   buf_data0;
+    logic [DATA_RGB_BW-1:0]   buf_data1;
 
     LineBufCtrl u_line_buf_ctrl(
         // input
@@ -349,14 +361,21 @@ module direct_tb;
         ,.o_lb_sram_AA   ( bus1_sram_AA )
         ,.o_lb_sram_AB   ( bus1_sram_AB )
         // Output
-        ,.o_frame_start  (  )
-        ,.o_frame_end    (  )
-        ,.o_valid        (  )
-        ,.o_depth0       (  )
+        ,.o_frame_start  ( buf_frame_start )
+        ,.o_frame_end    ( buf_frame_end   )
+        ,.o_valid        ( buf_valid       )
+        ,.o_idx0_x      ( buf_idx0_x )
+        ,.o_idx0_y      ( buf_idx0_y )
+        ,.o_idx1_x      ( buf_idx1_x )
+        ,.o_idx1_y      ( buf_idx1_y )
+        ,.o_depth0      ( buf_depth0 )
+        ,.o_depth1      ( buf_depth1 )
+        ,.o_data0       ( buf_pixel0 ) 
+        ,.o_data1       ( buf_pixel1 ) 
     );
 
     generate
-        for(genvar s = 0; s < 62; s = s+1) begin
+        for(genvar s = 0; s < 64; s = s+1) begin
             //sram_dp_depth uut1 (
             sram_lb_16b uut1 (
                 // clock signal
@@ -426,6 +445,12 @@ module direct_tb;
 
                            
     always @(posedge clk)begin
+        if(buf_valid) begin
+          $fwrite(f1, "%h\n", buf_idx0_x);
+          $fwrite(f1, "%h\n", buf_idx0_y);
+          $fwrite(f1, "%h\n", buf_idx1_x);
+          $fwrite(f1, "%h\n", buf_idx1_y);
+        end
         //if(cloud_valid) begin
         //  $fwrite(f1, "%d\n", $signed(cloud_x));
         //  $fwrite(f1, "%d\n", $signed(cloud_y));

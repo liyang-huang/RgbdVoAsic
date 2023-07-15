@@ -80,13 +80,13 @@ module DirectCorrCalc
     //=================================
     // Combinational Logic
     //=================================
-    assign o_idx0_x = idx0_x_d12;
-    assign o_idx0_y = idx0_y_d12;
-    assign o_idx1_x = proj_x;
-    assign o_idx1_y = proj_y;
-    assign o_trans_z1 = trans_z_d4;
-    assign o_depth0 = depth0_d12;
-    assign o_valid = proj_valid;
+    assign o_idx0_x = idx0_x_d13;
+    assign o_idx0_y = idx0_y_d13;
+    assign o_idx1_x = proj_x_d1;
+    assign o_idx1_y = proj_y_d1;
+    assign o_trans_z1 = trans_z_d5;
+    assign o_depth0 = depth0_d13;
+    assign o_valid = proj_valid_d1;
     assign idx0_x_clr = (idx0_x_r==r_hsize-1);
     assign idx0_y_clr = (idx0_y_r==r_vsize-1);
     assign diff_y = (proj_y > idx0_y_d12)? proj_y - idx0_y_d12 : idx0_y_d12 - proj_y;
@@ -332,7 +332,7 @@ module DirectCorrCalc
             proj_y_d1 <= '0;
             proj_valid_d1 <= '0;
         end
-        else if((diff_y <= MAX_DIFF_LINE) && proj_valid) begin
+        else if((diff_y <= MAX_DIFF_LINE) && proj_valid && proj_x<'d640 && proj_y<'d480) begin
             depth0_d13 <= depth0_d12;
             idx0_x_d13 <= idx0_x_d12;
             idx0_y_d13 <= idx0_y_d12;
