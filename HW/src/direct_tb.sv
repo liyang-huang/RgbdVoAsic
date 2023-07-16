@@ -44,7 +44,8 @@
 `include "./LineBufCtrl.sv"
 //`include "sram_v3/sram_dp_depth.v"
 //`include "sram_v3/sram_lb_FAST.v"
-`include "sram_v3/sram_lb_16b.v"
+//`include "sram_v3/sram_lb_16b.v"
+`include "sram_v3/sram_half_lb_16b.v"
 
 
 module direct_tb;
@@ -311,14 +312,14 @@ module direct_tb;
         ,.o_idx1_y       ( corr_idx1_y      )
     );
     
-    logic [15:0]     bus1_sram_QA [0:63];
-    logic [15:0]     bus1_sram_QB [0:63];
-    logic          bus1_sram_WENA [0:63];
-    logic          bus1_sram_WENB [0:63];
-    logic [15:0]    bus1_sram_DA  [0:63]; // pixel + depth
-    logic [15:0]    bus1_sram_DB  [0:63]; // pixel + depth
-    logic [9:0]    bus1_sram_AA   [0:63];
-    logic [9:0]    bus1_sram_AB   [0:63];
+    logic [15:0]     bus1_sram_QA [0:127];
+    logic [15:0]     bus1_sram_QB [0:127];
+    logic          bus1_sram_WENA [0:127];
+    logic          bus1_sram_WENB [0:127];
+    logic [15:0]    bus1_sram_DA  [0:127]; // pixel + depth
+    logic [15:0]    bus1_sram_DB  [0:127]; // pixel + depth
+    logic [8:0]    bus1_sram_AA   [0:127];
+    logic [8:0]    bus1_sram_AB   [0:127];
 
     logic                     buf_frame_start;
     logic                     buf_frame_end;
@@ -375,9 +376,9 @@ module direct_tb;
     );
 
     generate
-        for(genvar s = 0; s < 64; s = s+1) begin
+        for(genvar s = 0; s < 128; s = s+1) begin
             //sram_dp_depth uut1 (
-            sram_lb_16b uut1 (
+            sram_half_lb_16b uut1 (
                 // clock signal
                 .CLKA(clk),
                 .CLKB(clk),
@@ -430,12 +431,12 @@ module direct_tb;
                 .EMASB(1'b0),
                 .TCENA(1'b1),
                 .TWENA(1'b1),
-                .TAA(10'd0),
+                .TAA(9'd0),
                 .TDA(16'd0),
                 .TQA(16'd0),
                 .TCENB(1'b1),
                 .TWENB(1'b1),
-                .TAB(10'd0),
+                .TAB(9'd0),
                 .TDB(16'd0),
                 .TQB(16'd0),
                 .RET1N(1'b1)

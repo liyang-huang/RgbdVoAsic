@@ -30,14 +30,14 @@ module LineBufCtrl
     ,input        [H_SIZE_BW-1:0]     r_hsize
     ,input        [V_SIZE_BW-1:0]     r_vsize
     // SRAM
-    ,input [DATA_DEPTH_BW-1:0]        i_lb_sram_QA   [0:63]
-    ,input [DATA_DEPTH_BW-1:0]        i_lb_sram_QB   [0:63]
-    ,output logic                     o_lb_sram_WENA [0:63]
-    ,output logic                     o_lb_sram_WENB [0:63]
-    ,output logic [DATA_DEPTH_BW-1:0] o_lb_sram_DA   [0:63]
-    ,output logic [DATA_DEPTH_BW-1:0] o_lb_sram_DB   [0:63]
-    ,output logic [H_SIZE_BW-1:0]     o_lb_sram_AA   [0:63]
-    ,output logic [H_SIZE_BW-1:0]     o_lb_sram_AB   [0:63]
+    ,input [DATA_DEPTH_BW-1:0]        i_lb_sram_QA   [0:127]
+    ,input [DATA_DEPTH_BW-1:0]        i_lb_sram_QB   [0:127]
+    ,output logic                     o_lb_sram_WENA [0:127]
+    ,output logic                     o_lb_sram_WENB [0:127]
+    ,output logic [DATA_DEPTH_BW-1:0] o_lb_sram_DA   [0:127]
+    ,output logic [DATA_DEPTH_BW-1:0] o_lb_sram_DB   [0:127]
+    ,output logic [H_SIZE_BW-2:0]     o_lb_sram_AA   [0:127]
+    ,output logic [H_SIZE_BW-2:0]     o_lb_sram_AB   [0:127]
     // Output
     ,output logic                     o_frame_start
     ,output logic                     o_frame_end
@@ -61,46 +61,48 @@ module LineBufCtrl
     logic [V_SIZE_BW-1:0]     idx1_y_r;
     logic                     idx1_x_clr;
     logic                     idx1_y_clr;
-    logic                     lb_sram_WENA_r [0:63];
-    logic                     lb_sram_WENB_r [0:63];
-    logic [DATA_DEPTH_BW-1:0] lb_sram_DA_r   [0:63]; 
-    logic [H_SIZE_BW-1:0]     lb_sram_AA_r   [0:63];
-    logic [H_SIZE_BW-1:0]     lb_sram_AB_r   [0:63];
+    logic                     lb_sram_WENA_r [0:127];
+    logic                     lb_sram_WENB_r [0:127];
+    logic [DATA_DEPTH_BW-1:0] lb_sram_DA_r   [0:127]; 
+    logic [H_SIZE_BW-2:0]     lb_sram_AA_r   [0:127];
+    logic [H_SIZE_BW-2:0]     lb_sram_AB_r   [0:127];
     logic [5:0]               sram_idx_r;
     logic [V_SIZE_BW-1:0]     i_idx1_y_d1;
     logic [5:0]               sram_read_idx_r;
     logic                     valid0_d1_r;
     logic                     valid0_d2_r;
     logic [H_SIZE_BW-1:0]     i_idx1_x_d2;
-    logic [DATA_DEPTH_BW-1:0] lb_sram_QB_r   [0:63]; 
+    logic [DATA_DEPTH_BW-1:0] lb_sram_QB_r   [0:127]; 
     logic [DATA_DEPTH_BW-1:0] lb_sram_QB_mux_r; 
     logic [DATA_DEPTH_BW-1:0] lb_sram_QB_mux2_r; 
     logic                     valid0_d4;
-    logic [5:0]               sram_read_idx_d2;
+    logic [5:0]               sram_read_idx_d3;
     logic                     valid0_d5_r;
     logic                     valid0_d6_r;
-    logic [CLOUD_BW-1:0]      trans_z1_d5;
+    logic                     valid0_d7_r;
+    logic [CLOUD_BW-1:0]      trans_z1_d6;
     logic [CLOUD_BW-1:0]      depth1_mul;
     logic [CLOUD_BW-1:0]      diff_z;
-    logic [H_SIZE_BW-1:0]     i_idx0_x_d6;
-    logic [V_SIZE_BW-1:0]     i_idx0_y_d6;
-    logic [H_SIZE_BW-1:0]     i_idx1_x_d6;
-    logic [V_SIZE_BW-1:0]     i_idx1_y_d6;
+    logic [H_SIZE_BW-1:0]     i_idx0_x_d7;
+    logic [V_SIZE_BW-1:0]     i_idx0_y_d7;
+    logic [H_SIZE_BW-1:0]     i_idx1_x_d5;
+    logic [H_SIZE_BW-1:0]     i_idx1_x_d7;
+    logic [V_SIZE_BW-1:0]     i_idx1_y_d7;
     logic [CLOUD_BW-1:0]      max_diff_depth_w;
 
     //=================================
     // Combinational Logic
     //=================================
-    assign o_valid = valid0_d6_r;
-    assign o_idx0_x = i_idx0_x_d6;
-    assign o_idx0_y = i_idx0_y_d6;
-    assign o_idx1_x = i_idx1_x_d6;
-    assign o_idx1_y = i_idx1_y_d6;
+    assign o_valid = valid0_d7_r;
+    assign o_idx0_x = i_idx0_x_d7;
+    assign o_idx0_y = i_idx0_y_d7;
+    assign o_idx1_x = i_idx1_x_d7;
+    assign o_idx1_y = i_idx1_y_d7;
 
     assign idx1_x_clr = (idx1_x_r==r_hsize-1);
     assign idx1_y_clr = (idx1_y_r==r_vsize-1);
     generate
-        for(genvar i = 0; i < 64; i = i+1) begin
+        for(genvar i = 0; i < 128; i = i+1) begin
             assign o_lb_sram_WENA[i] = lb_sram_WENA_r[i];
             assign o_lb_sram_WENB[i] = lb_sram_WENB_r[i];
             assign o_lb_sram_DA[i]   = lb_sram_DA_r[i];
@@ -111,8 +113,8 @@ module LineBufCtrl
     endgenerate
 
     assign depth1_mul = {lb_sram_QB_mux_r,{MUL{1'b0}}};
-    assign diff_z = (trans_z1_d5 > depth1_mul) ? trans_z1_d5 - depth1_mul :
-                                                 depth1_mul - trans_z1_d5;
+    assign diff_z = (trans_z1_d6 > depth1_mul) ? trans_z1_d6 - depth1_mul :
+                                                 depth1_mul - trans_z1_d6;
     assign max_diff_depth_w = {MAX_DIFF_DEPTH,{MUL{1'b0}}};
 
     always_comb begin
@@ -142,40 +144,40 @@ module LineBufCtrl
     DataDelay
     #(
         .DATA_BW(V_SIZE_BW)
-       ,.STAGE(6)
+       ,.STAGE(7)
     ) u_idx1_y_delay (
         // input
          .i_clk(i_clk)
         ,.i_rst_n(i_rst_n)
         ,.i_data(i_idx1_y)
         // Output
-        ,.o_data(i_idx1_y_d6)
+        ,.o_data(i_idx1_y_d7)
     );
 
     DataDelay
     #(
         .DATA_BW(V_SIZE_BW)
-       ,.STAGE(6)
+       ,.STAGE(7)
     ) u_idx0_y_delay (
         // input
          .i_clk(i_clk)
         ,.i_rst_n(i_rst_n)
         ,.i_data(i_idx0_y)
         // Output
-        ,.o_data(i_idx0_y_d6)
+        ,.o_data(i_idx0_y_d7)
     );
 
     DataDelay
     #(
         .DATA_BW(H_SIZE_BW)
-       ,.STAGE(6)
+       ,.STAGE(7)
     ) u_idx0_x_delay (
         // input
          .i_clk(i_clk)
         ,.i_rst_n(i_rst_n)
         ,.i_data(i_idx0_x)
         // Output
-        ,.o_data(i_idx0_x_d6)
+        ,.o_data(i_idx0_x_d7)
     );
 
     DataDelay
@@ -194,14 +196,27 @@ module LineBufCtrl
     DataDelay
     #(
         .DATA_BW(H_SIZE_BW)
-       ,.STAGE(4)
+       ,.STAGE(3)
     ) u_idx1_x_delay2 (
         // input
          .i_clk(i_clk)
         ,.i_rst_n(i_rst_n)
         ,.i_data(i_idx1_x_d2)
         // Output
-        ,.o_data(i_idx1_x_d6)
+        ,.o_data(i_idx1_x_d5)
+    );
+
+    DataDelay
+    #(
+        .DATA_BW(H_SIZE_BW)
+       ,.STAGE(2)
+    ) u_idx1_x_delay3 (
+        // input
+         .i_clk(i_clk)
+        ,.i_rst_n(i_rst_n)
+        ,.i_data(i_idx1_x_d5)
+        // Output
+        ,.o_data(i_idx1_x_d7)
     );
 
     DataDelay
@@ -220,27 +235,27 @@ module LineBufCtrl
     DataDelay
     #(
         .DATA_BW(6)
-       ,.STAGE(2)
+       ,.STAGE(3)
     ) u_sram_read_idx_delay (
         // input
          .i_clk(i_clk)
         ,.i_rst_n(i_rst_n)
         ,.i_data(sram_read_idx_r)
         // Output
-        ,.o_data(sram_read_idx_d2)
+        ,.o_data(sram_read_idx_d3)
     );
 
     DataDelay
     #(
         .DATA_BW(CLOUD_BW)
-       ,.STAGE(5)
+       ,.STAGE(6)
     ) u_trans_z_delay (
         // input
          .i_clk(i_clk)
         ,.i_rst_n(i_rst_n)
         ,.i_data(i_trans_z1)
         // Output
-        ,.o_data(trans_z1_d5)
+        ,.o_data(trans_z1_d6)
     );
 
     //===================
@@ -291,7 +306,7 @@ module LineBufCtrl
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if(!i_rst_n) begin
-            for(int i = 0; i < 64; i = i+1) begin
+            for(int i = 0; i < 128; i = i+1) begin
                 lb_sram_DA_r[i] <= '0;
                 lb_sram_AA_r[i] <= '0;
                 lb_sram_WENA_r[i] <= 1;
@@ -300,14 +315,30 @@ module LineBufCtrl
         else if(i_valid1) begin
             for(int i = 0; i < 64; i = i+1) begin
                 if(sram_idx_r == i) begin
-                    lb_sram_DA_r[i] <= i_depth1;
-                    lb_sram_AA_r[i] <= idx1_x_r;
-                    lb_sram_WENA_r[i] <= !i_valid1;
+                    if(!idx1_x_r[0])begin
+                        lb_sram_DA_r[i] <= i_depth1;
+                        lb_sram_AA_r[i] <= idx1_x_r[H_SIZE_BW-1:1];
+                        lb_sram_WENA_r[i] <= !i_valid1;
+                        lb_sram_DA_r[i+64] <= '0;
+                        lb_sram_AA_r[i+64] <= 511;
+                        lb_sram_WENA_r[i+64] <= 1;
+                    end
+                    else begin
+                        lb_sram_DA_r[i] <= '0;
+                        lb_sram_AA_r[i] <= 511;
+                        lb_sram_WENA_r[i] <= 1;
+                        lb_sram_DA_r[i+64] <= i_depth1;
+                        lb_sram_AA_r[i+64] <= idx1_x_r[H_SIZE_BW-1:1];
+                        lb_sram_WENA_r[i+64] <= !i_valid1;
+                    end
                 end
                 else begin
                     lb_sram_DA_r[i] <= '0;
-                    lb_sram_AA_r[i] <= 1023;
+                    lb_sram_AA_r[i] <= 511;
                     lb_sram_WENA_r[i] <= 1;
+                    lb_sram_DA_r[i+64] <= '0;
+                    lb_sram_AA_r[i+64] <= 511;
+                    lb_sram_WENA_r[i+64] <= 1;
                 end
                 //if(sram_idx_r-1 == i) begin
                 //    lb_sram_AB_r[i] <= idx1_x_r;
@@ -321,18 +352,20 @@ module LineBufCtrl
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if(!i_rst_n) begin
-            for(int i = 0; i < 64; i = i+1) begin
-                lb_sram_AB_r[i] <= 'hffff;
+            for(int i = 0; i < 128; i = i+1) begin
+                lb_sram_AB_r[i] <= 511;
                 lb_sram_WENB_r[i] <= 1;
             end
         end
         else if(valid0_d2_r) begin
             for(int i = 0; i < 64; i = i+1) begin
                 if(sram_read_idx_r == i) begin
-                    lb_sram_AB_r[i] <= i_idx1_x_d2;
+                    lb_sram_AB_r[i] <= i_idx1_x_d2[H_SIZE_BW-1:1];
+                    lb_sram_AB_r[i+64] <= i_idx1_x_d2[H_SIZE_BW-1:1];
                 end
                 else begin
-                    lb_sram_AB_r[i] <= 1023;
+                    lb_sram_AB_r[i] <= 511;
+                    lb_sram_AB_r[i+64] <= 511;
                 end
             end
         end
@@ -340,12 +373,12 @@ module LineBufCtrl
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
         if(!i_rst_n) begin
-            for(int i = 0; i < 64; i = i+1) begin
+            for(int i = 0; i < 128; i = i+1) begin
                 lb_sram_QB_r[i] <= '0;
             end
         end
         else begin
-            for(int i = 0; i < 64; i = i+1) begin
+            for(int i = 0; i < 128; i = i+1) begin
                 lb_sram_QB_r[i] <= i_lb_sram_QB[i];
             end
         end
@@ -355,10 +388,12 @@ module LineBufCtrl
         if(!i_rst_n) begin
             lb_sram_QB_mux_r <= '0;
         end
-        else if(valid0_d4) begin
+        else if(valid0_d5_r) begin
             for(int i = 0; i < 64; i = i+1) begin
-                if(sram_read_idx_d2 == i)
-                    lb_sram_QB_mux_r <= i_lb_sram_QB[i];
+                if(sram_read_idx_d3 == i && !i_idx1_x_d5[0])
+                    lb_sram_QB_mux_r <= lb_sram_QB_r[i];
+                else if(sram_read_idx_d3 == i && i_idx1_x_d5[0])
+                    lb_sram_QB_mux_r <= lb_sram_QB_r[i+64];
             end
         end
     end
@@ -367,10 +402,12 @@ module LineBufCtrl
         if(!i_rst_n) begin
             lb_sram_QB_mux2_r <= '0;
         end
-        else if(valid0_d4) begin
+        else if(valid0_d5_r) begin
             for(int i = 0; i < 64; i = i+1) begin
-                if(sram_read_idx_d2 == i+1 && sram_read_idx_d2 != 63)
-                    lb_sram_QB_mux2_r <= i_lb_sram_QB[i+1];
+                if(sram_read_idx_d3 == i && i_idx1_x_d5[0])
+                    lb_sram_QB_mux2_r <= i_lb_sram_QB[i];
+                else if(sram_read_idx_d3 == i && !i_idx1_x_d5[0])
+                    lb_sram_QB_mux2_r <= i_lb_sram_QB[i+64];
             end
         end
     end
@@ -381,17 +418,22 @@ module LineBufCtrl
     end
 
     always_ff @(posedge i_clk or negedge i_rst_n) begin
+        if (!i_rst_n) valid0_d6_r <= '0;
+        else valid0_d6_r <= valid0_d5_r;
+    end
+
+    always_ff @(posedge i_clk or negedge i_rst_n) begin
         if(!i_rst_n) begin
-            valid0_d6_r <= 0;
+            valid0_d7_r <= 0;
         end
-        else if(valid0_d5_r) begin
+        else if(valid0_d6_r) begin
             if(lb_sram_QB_mux_r>MIN_DEPTH && lb_sram_QB_mux_r<MAX_DEPTH && diff_z < max_diff_depth_w)
-                valid0_d6_r <= 1;
+                valid0_d7_r <= 1;
             else
-                valid0_d6_r <= 0;
+                valid0_d7_r <= 0;
         end
         else begin
-            valid0_d6_r <= 0;
+            valid0_d7_r <= 0;
         end
     end
 
